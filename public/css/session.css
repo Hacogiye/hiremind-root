@@ -708,3 +708,43 @@
 .cmp-down { color: var(--danger); background: var(--danger-soft); }
 .cmp-flat { color: var(--muted); background: var(--bg-soft); }
 .cmp-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* ===================== Hero compact (v15.2) ===================== */
+.result-hero.hero-compact { padding: 18px 22px; }
+.hc-main { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.hc-id { min-width: 0; }
+.hc-id .rh-name { font-family: var(--font-head); font-size: 1.35rem; font-weight: 700; color: var(--fg); }
+.hc-id .rh-title { color: var(--muted); font-size: 0.92rem; margin-top: 2px; }
+.hc-stats { display: flex; gap: 10px; }
+.hc-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px 14px; min-width: 100px; cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.hc-stat:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow); }
+.hc-stat:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.hs-num { font-family: var(--font-head); font-weight: 700; font-size: 1.25rem; color: var(--primary); line-height: 1.1; }
+.hs-unit { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+.hs-lbl { font-size: 0.72rem; color: var(--muted); text-align: center; line-height: 1.25; }
+.hs-bar { width: 64px; height: 4px; border-radius: 99px; background: rgba(99, 102, 241, 0.15); overflow: hidden; margin-top: 3px; }
+.hs-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--grad); transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
+.hc-stat.pass-very-likely .hs-num, .hc-stat.pass-likely .hs-num { color: var(--accent); }
+.hc-stat.pass-uncertain .hs-num { color: var(--warn); }
+.hc-stat.pass-unlikely .hs-num, .hc-stat.pass-very-unlikely .hs-num { color: var(--danger); }
+.hc-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+  background: none; border: none; padding: 4px 2px; cursor: pointer;
+  color: var(--primary); font-weight: 600; font-size: 0.85rem; font-family: var(--font-body);
+}
+.hc-toggle svg { transition: transform 0.2s; }
+.hc-toggle.open svg { transform: rotate(180deg); }
+.hc-extra { margin-top: 10px; }
+.hc-sum-text { font-size: 0.95rem; line-height: 1.6; color: var(--fg-soft); margin-bottom: 12px; }
+.hc-extra .rh-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 760px) {
+  .hc-main { flex-direction: column; align-items: stretch; gap: 12px; }
+  .hc-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .hc-stat { min-width: 0; padding: 8px 6px; }
+  .hc-id .rh-name { font-size: 1.2rem; }
+}

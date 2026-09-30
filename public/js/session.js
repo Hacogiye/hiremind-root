@@ -210,51 +210,63 @@
         renderTab(btn.dataset.tab);
       });
     });
+    // Hero compact: bấm stat → nhảy đúng tab phân tích; nút mở tóm tắt + kỹ năng
+    document.querySelectorAll('.hc-stat').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelector(`[data-tab="${btn.dataset.go}"]`)?.click();
+    }));
+    const hct = document.getElementById('hcToggle');
+    if (hct) hct.addEventListener('click', () => {
+      const ex = document.getElementById('hcExtra');
+      const nowHidden = ex.classList.toggle('hidden');
+      hct.classList.toggle('open', !nowHidden);
+      hct.setAttribute('aria-expanded', String(!nowHidden));
+    });
     renderTab('overview');
   }
 
   function renderHero() {
+    // Hero COMPACT — chiếm ít diện tích (đặc biệt mobile): tên + 3 ô stat bấm được
+    // nhảy đúng tab; tóm tắt dài + chip kỹ năng + disclaimer gói vào nút mở rộng.
+    // Chi tiết đầy đủ (hire panel, ATS từng yêu cầu) nằm trong tab, không lặp ở đây.
     const r = SESSION.result, cv = SESSION.cv, jd = SESSION.jd;
     const v = VERDICT[r.match?.verdict] || null;
     const ha = hireAssess();
     const pv = PASS_VERDICT[ha.verdict] || PASS_VERDICT.uncertain;
+    const stats = [
+      { num: r.overallScore || 0, unit: '/100', lbl: 'Điểm CV', bar: true, tab: 'overview' },
+      ...(jd && r.match ? [{ num: r.match.matchScore, unit: '/100', lbl: 'Khớp ATS' + (v ? ` · ${v.label}` : ''), tab: 'match' }] : []),
+      { num: ha.passProbability, unit: '%', lbl: pv.label, cls: 'pass-' + (ha.verdict || 'uncertain').replace('_', '-'), tab: 'overview', title: `${pv.emoji} ${ha.headline || 'Khả năng đậu phỏng vấn — xem phân tích ở tab Tổng quan'}` },
+    ];
+    const hasExtra = !!r.summary || (cv.extractedSkills || []).length > 0;
     return `
-      <div class="result-hero grad-border">
-        <div class="score-pill">
-          <div class="sp-label">Điểm CV</div>
-          <div class="sp-num"><span class="num" data-count="${r.overallScore || 0}">0</span><span class="den">/100</span></div>
-          <div class="sp-bar"><div class="fill" data-target="${r.overallScore || 0}"></div></div>
-        </div>
-        <div class="rh-main">
-          <div class="rh-name">${esc(cv.candidateName || 'Ứng viên')}</div>
-          <div class="rh-title">${esc(cv.candidateTitle || SESSION.meta?.targetRole || '')} · ${esc(SESSION.meta?.experienceLevel || '')} · ${cv.experienceYears || 0} năm KN</div>
-          <div class="rh-summary">${esc(r.summary || '')}</div>
-          <div class="rh-chips">
-            ${(cv.extractedSkills || []).slice(0, 8).map(sk => `<span class="badge badge-indigo">${esc(sk)}</span>`).join('')}
+      <div class="result-hero hero-compact grad-border">
+        <div class="hc-main">
+          <div class="hc-id">
+            <div class="rh-name">${esc(cv.candidateName || 'Ứng viên')}</div>
+            <div class="rh-title">${esc(cv.candidateTitle || SESSION.meta?.targetRole || '')}${cv.experienceYears ? ` · ${cv.experienceYears} năm KN` : ''}</div>
+          </div>
+          <div class="hc-stats">
+            ${stats.map(st => `
+              <button class="hc-stat ${st.cls || ''}" data-go="${st.tab}" ${st.title ? `title="${esc(st.title)}"` : ''} aria-label="${esc(st.lbl)}">
+                <span class="hs-num"><span data-count="${st.num}">0</span><span class="hs-unit">${st.unit}</span></span>
+                <span class="hs-lbl">${esc(st.lbl)}</span>
+                ${st.bar ? `<span class="hs-bar"><i data-target="${st.num}"></i></span>` : ''}
+              </button>`).join('')}
           </div>
         </div>
-        ${jd && r.match ? `
-        <div class="rh-jd">
-          <div class="jd-num grad-text" data-count="${r.match.matchScore}">0</div>
-          <div class="jd-lbl">điểm khớp ATS với<br><strong>${esc(jd.title || 'JD')}</strong></div>
-          ${v ? `<div style="margin-top: 10px;"><span class="verdict-chip ${v.cls}">${v.label}</span></div>` : ''}
-          <div class="pass-gauge pass-${(ha.verdict || 'uncertain').replace('_', '-')}">
-            <div class="pg-head"><span class="pg-emoji">${pv.emoji}</span> Khả năng đậu phỏng vấn</div>
-            <div class="pg-pct" data-count="${ha.passProbability}">0%</div>
-            <div class="pg-verdict">${esc(pv.label)} · ${(100 - ha.passProbability)}% sẽ trượt</div>
+        ${hasExtra ? `
+        <button class="hc-toggle" id="hcToggle" aria-expanded="false">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          <span>Tóm tắt &amp; kỹ năng</span>
+        </button>
+        <div class="hc-extra hidden" id="hcExtra">
+          ${r.summary ? `<p class="hc-sum-text">${esc(r.summary)}</p>` : ''}
+          ${(cv.extractedSkills || []).length ? `<div class="rh-chips">${cv.extractedSkills.slice(0, 8).map(sk => `<span class="badge badge-indigo">${esc(sk)}</span>`).join('')}</div>` : ''}
+          <div class="ai-disclaimer" style="margin-top: 12px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+            Đánh giá của AI — chỉ mang tính tham khảo, không đảm bảo kết quả tuyển dụng thực tế.
           </div>
-        </div>` : `
-        <div class="rh-jd">
-          <div class="pass-gauge pass-${(ha.verdict || 'uncertain').replace('_', '-')}">
-            <div class="pg-head"><span class="pg-emoji">${pv.emoji}</span> Khả năng đậu phỏng vấn</div>
-            <div class="pg-pct" data-count="${ha.passProbability}">0%</div>
-            <div class="pg-verdict">${esc(pv.label)} · ${(100 - ha.passProbability)}% sẽ trượt</div>
-          </div>
-        </div>`}
-      </div>
-      <div class="ai-disclaimer">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
-        Đánh giá của AI — chỉ mang tính tham khảo, không đảm bảo kết quả tuyển dụng thực tế.
+        </div>` : ''}
       </div>`;
   }
 
@@ -312,8 +324,8 @@
   }
 
   function animateScores() {
-    // pill bars
-    document.querySelectorAll('.sp-bar .fill[data-target]').forEach(bar => {
+    // pill bars + hero mini bars
+    document.querySelectorAll('.sp-bar .fill[data-target], .hs-bar i[data-target]').forEach(bar => {
       if (bar.dataset.animated) { bar.style.width = (+bar.dataset.target) + '%'; return; }
       bar.dataset.animated = '1';
       requestAnimationFrame(() => { bar.style.width = (+bar.dataset.target) + '%'; });
