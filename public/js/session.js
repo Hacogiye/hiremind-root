@@ -319,9 +319,11 @@
     const bdRows = [
       ['content', 'Nội dung'], ['format', 'Trình bày'], ['relevance', 'Liên quan vị trí'], ['impact', 'Tác động'],
     ];
-    // Phiên kiểm chứng (nạp lại CV đã chỉnh) — panel so sánh điểm với phiên gốc
-    const cmpMount = SESSION.meta?.parentSessionId ? '<div class="mb-6" id="cmpMount"></div>' : '';
-    if (SESSION.meta?.parentSessionId) loadCompare();
+    // Phiên kiểm chứng (nạp lại CV đã chỉnh) — panel so sánh điểm với phiên gốc.
+    // parentSessionId nằm ở top-level của session (server đặt khi reupload).
+    const parentId = SESSION.parentSessionId || SESSION.meta?.parentSessionId;
+    const cmpMount = parentId ? '<div class="mb-6" id="cmpMount"></div>' : '';
+    if (parentId) loadCompare(parentId);
     return `
       ${cmpMount}
       ${(ha.headline || (ha.reasons && ha.reasons.length)) ? `
@@ -560,9 +562,9 @@
   }
 
   // ----- So sánh trước/sau (phiên kiểm chứng nạp CV đã chỉnh) -----
-  async function loadCompare() {
+  async function loadCompare(parentId) {
     try {
-      const res = await fetch(`/api/session/${SESSION.meta.parentSessionId}`);
+      const res = await fetch(`/api/session/${parentId}`);
       if (!res.ok) return;
       const p = await res.json();
       const mount = document.getElementById('cmpMount');
@@ -599,7 +601,7 @@
             }).join('')}
           </div>
           <div class="cmp-foot">
-            <a class="btn btn-ghost btn-sm" href="/s/${SESSION.meta.parentSessionId}">Xem phiên gốc</a>
+            <a class="btn btn-ghost btn-sm" href="/s/${parentId}">Xem phiên gốc</a>
             <span class="small muted">AI chấm lại trên cùng vị trí &amp; JD — điểm chênh lệch chỉ mang tính tham khảo.</span>
           </div>
         </div>`;
