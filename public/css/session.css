@@ -710,7 +710,9 @@
 .cmp-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 /* ===================== Hero compact (v15.2) ===================== */
-.result-hero.hero-compact { padding: 18px 22px; }
+/* display:block GHI ĐÈ display:flex của .result-hero gốc (layout 3 cột cũ) —
+   không ghi đè thì hc-extra khi mở rộng bị đẩy sang CẠNH thay vì xuống dưới. */
+.result-hero.hero-compact { display: block; padding: 18px 22px; }
 .hc-main { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .hc-id { min-width: 0; }
 .hc-id .rh-name { font-family: var(--font-head); font-size: 1.35rem; font-weight: 700; color: var(--fg); }
@@ -733,13 +735,13 @@
 .hc-stat.pass-uncertain .hs-num { color: var(--warn); }
 .hc-stat.pass-unlikely .hs-num, .hc-stat.pass-very-unlikely .hs-num { color: var(--danger); }
 .hc-toggle {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
-  background: none; border: none; padding: 4px 2px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; padding: 6px 2px; cursor: pointer; flex-shrink: 0; align-self: center;
   color: var(--primary); font-weight: 600; font-size: 0.85rem; font-family: var(--font-body);
 }
 .hc-toggle svg { transition: transform 0.2s; }
 .hc-toggle.open svg { transform: rotate(180deg); }
-.hc-extra { margin-top: 10px; }
+.hc-extra { margin-top: 14px; }
 .hc-sum-text { font-size: 0.95rem; line-height: 1.6; color: var(--fg-soft); margin-bottom: 12px; }
 .hc-extra .rh-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 760px) {
@@ -747,4 +749,5 @@
   .hc-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
   .hc-stat { min-width: 0; padding: 8px 6px; }
   .hc-id .rh-name { font-size: 1.2rem; }
+  .hc-toggle { align-self: flex-start; margin-top: 0; }
 }

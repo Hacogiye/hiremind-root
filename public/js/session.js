@@ -86,7 +86,7 @@
   const PASS_VERDICT = {
     very_likely: { cls: 'pass-very-likely', label: 'Rất nhiều khả năng đậu', emoji: '🎯' },
     likely: { cls: 'pass-likely', label: 'Nhiều khả năng đậu', emoji: '👍' },
-    uncertain: { cls: 'pass-uncertain', label: 'Cân bằng 50/50', emoji: '⚖️' },
+    uncertain: { cls: 'pass-uncertain', label: 'Chưa rõ ràng', emoji: '⚖️' },
     unlikely: { cls: 'pass-unlikely', label: 'Nhiều khả năng trượt', emoji: '⚠️' },
     very_unlikely: { cls: 'pass-very-unlikely', label: 'Gần như chắc chắn trượt', emoji: '❌' },
   };
@@ -253,12 +253,13 @@
                 ${st.bar ? `<span class="hs-bar"><i data-target="${st.num}"></i></span>` : ''}
               </button>`).join('')}
           </div>
+          ${hasExtra ? `
+          <button class="hc-toggle" id="hcToggle" aria-expanded="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <span>Tóm tắt &amp; kỹ năng</span>
+          </button>` : ''}
         </div>
         ${hasExtra ? `
-        <button class="hc-toggle" id="hcToggle" aria-expanded="false">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          <span>Tóm tắt &amp; kỹ năng</span>
-        </button>
         <div class="hc-extra hidden" id="hcExtra">
           ${r.summary ? `<p class="hc-sum-text">${esc(r.summary)}</p>` : ''}
           ${(cv.extractedSkills || []).length ? `<div class="rh-chips">${cv.extractedSkills.slice(0, 8).map(sk => `<span class="badge badge-indigo">${esc(sk)}</span>`).join('')}</div>` : ''}
