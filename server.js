@@ -547,16 +547,12 @@ app.post('/api/session/:id/cover-letter', rateLimit('coverLetter'), async (req, 
 
 // ---------- CV Rewrite & Reshape ----------
 // Viết lại CV theo vị trí mục tiêu từ phân tích đã có. Persisted như cover letter:
-// rewrite + rewriteMeta (cache key) lưu khi xong, rewritePending=true khi đang tạo —
-// user rời tab quay lại vẫn thấy. Cùng options → trả cache, không tốn AI call.
+// rewrite lưu khi xong, rewritePending=true khi đang tạo — user rời tab quay lại vẫn thấy.
+// POST luôn tạo MỚI (UI chỉ gọi khi user bấm nút; restore sau reload đọc thẳng session.rewrite).
 app.post('/api/session/:id/rewrite', rateLimit('rewrite'), async (req, res) => {
   try {
     const s = readSession(req.params.id);
     if (s.status !== 'ready') return res.status(400).json({ error: 'Phiên chưa sẵn sàng' });
-
-    if (s.rewrite && s.rewriteMeta === 'default') {
-      return res.json({ ...s.rewrite, cached: true });
-    }
 
     await withSession(req.params.id, s2 => {
       s2.rewritePending = true;
