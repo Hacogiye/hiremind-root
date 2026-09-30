@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HireMind — Màn hình chính</title>
+<link rel="stylesheet" href="../css/base.css?v=202609242030">
+<link rel="stylesheet" href="style.css?v=202609242030">
+</head>
+<body>
+<div class="aurora"><div class="blob-1"></div><div class="blob-2"></div><div class="blob-3"></div><div class="blob-4"></div></div>
+<div class="aurora-dots"></div>
+
+<header class="ui-hero reveal">
+  <span class="ui-eyebrow">HireMind · Thiết kế giao diện</span>
+  <h1>Các màn hình chính</h1>
+  <p>Từ nộp CV trong vô vọng → biết trước tỷ lệ được gọi phỏng vấn. 13 màn hình: landing, wizard, dashboard 7 tab, dark mode &amp; mobile.</p>
+</header>
+
+<main class="ui-grid">
+  <div class="ui-quick-head reveal">Dành cho ban giám khảo</div>
+  <section class="ui-quick reveal">
+    <a class="ui-link" href="https://hackathon.uggiare.vn/" target="_blank" rel="noopener">
+      <span class="ui-ico">🌐</span>
+      <span class="ui-txt"><b>Trang web chính thức</b><span class="ui-url">hackathon.uggiare.vn</span></span>
+    </a>
+    <a class="ui-link" href="https://hackathon.uggiare.vn/s/c9ce14e69048" target="_blank" rel="noopener">
+      <span class="ui-ico">📄</span>
+      <span class="ui-txt"><b>CV đã nộp sẵn (demo)</b><span class="ui-url">/s/c9ce14e69048</span></span>
+    </a>
+    <a class="ui-link" href="https://youtu.be/3iuDUDAINsA" target="_blank" rel="noopener">
+      <span class="ui-ico">▶️</span>
+      <span class="ui-txt"><b>Video demo</b><span class="ui-url">youtu.be/3iuDUDAINsA</span></span>
+    </a>
+  </section>
+
+  <section class="ui-group reveal">
+    <h2>1 · Landing &amp; Wizard</h2>
+    <div class="ui-cards">
+      <figure class="ui-card show-shot"><img src="01-landing-hero.jpg" alt="Landing hero" loading="lazy"><figcaption>Landing — hero + phân tích CV miễn phí</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="02-landing-tinh-nang.jpg" alt="Landing tính năng" loading="lazy"><figcaption>Landing — tính năng &amp; điểm khác biệt</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="03-wizard.jpg" alt="Wizard nộp CV" loading="lazy"><figcaption>Wizard — tải CV, dán link JD, nhập chí tiêu</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="ui-group reveal">
+    <h2>2 · Dashboard phiên phân tích (7 tab)</h2>
+    <div class="ui-cards">
+      <figure class="ui-card show-shot"><img src="04-tong-quan.jpg" alt="Tổng quan" loading="lazy"><figcaption>Tổng quan — tỷ lệ được gọi phỏng vấn</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="05-doi-chieu-jd.jpg" alt="Đối chiếu JD" loading="lazy"><figcaption>Đối chiếu JD — từng yêu cầu có bằng chứng</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="06-lo-trinh.jpg" alt="Lộ trình" loading="lazy"><figcaption>Lộ trình 6 bước bù đắp lỗ hổng</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="07-chat-coach.jpg" alt="Chat Coach" loading="lazy"><figcaption>Chat Coach — hỏi đáp kèm ảnh CV</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="08-phong-van.jpg" alt="Phỏng vấn giả lập" loading="lazy"><figcaption>Phỏng vấn giả lập — mô phỏng tâm lý + báo cáo</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="09-cover-letter.jpg" alt="Cover Letter" loading="lazy"><figcaption>Cover Letter — thư giới hạn theo JD</figcaption></figure>
+      <figure class="ui-card show-shot"><img src="10-cv-goc.jpg" alt="CV gốc" loading="lazy"><figcaption>CV gốc — xem lại hồ sơ đã tải</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="ui-group reveal">
+    <h2>3 · Dark mode</h2>
+    <div class="ui-cards">
+      <figure class="ui-card ui-wide show-shot"><img src="11-dark-mode.jpg" alt="Dark mode" loading="lazy"><figcaption>Dark mode toàn giao diện</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="ui-group reveal">
+    <h2>4 · Mobile (390px)</h2>
+    <div class="ui-cards ui-phones">
+      <figure class="ui-card ui-mobile show-shot"><img src="12-mobile-landing.jpg" alt="Mobile landing" loading="lazy"><figcaption>Mobile — landing</figcaption></figure>
+      <figure class="ui-card ui-mobile show-shot"><img src="13-mobile-session.jpg" alt="Mobile session" loading="lazy"><figcaption>Mobile — dashboard</figcaption></figure>
+    </div>
+  </section>
+</main>
+
+<footer class="ui-foot reveal">HireMind — đối chiếu chuẩn xác · phỏng vấn thực tế · phản hồi trung thực</footer>
+
+<script src="../js/theme.js?v=202609242030"></script>
+<script src="../js/effects.js?v=202609242030"></script>
+<script>HMStagger();
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));</script>
+</body>
+</html>

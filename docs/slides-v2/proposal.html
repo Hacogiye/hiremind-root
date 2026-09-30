@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>HireMind — Proposal v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1e293b;
+    --muted: #64748b;
+    --indigo: #6366f1;
+    --violet: #7c3aed;
+    --grad: linear-gradient(135deg, #6366f1, #a855f7);
+    --soft: #f4f2fd;
+    --line: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: #e9e7f5; }
+  .slide {
+    width: 1280px; height: 720px;
+    position: relative; overflow: hidden;
+    background: #fff;
+    margin: 0 auto;
+    display: flex; flex-direction: column;
+    padding: 52px 72px;
+  }
+  h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .eyebrow {
+    display: inline-block; padding: 6px 16px; border-radius: 999px;
+    background: var(--soft); color: var(--indigo);
+    font-weight: 700; font-size: 13.5px; letter-spacing: 0.07em; text-transform: uppercase;
+    margin-bottom: 16px; width: fit-content;
+  }
+  .pagenum { position: absolute; bottom: 26px; right: 40px; color: #cbd5e1; font-weight: 700; font-size: 14px; }
+  .brand { position: absolute; bottom: 26px; left: 40px; color: #cbd5e1; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 22px; height: 22px; border-radius: 7px; background: var(--grad); display: inline-grid; place-items: center; color: #fff; font-size: 11px; }
+  .deco { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.4; pointer-events: none; }
+
+  /* ===== Animations ===== */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes drift { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(28px, -22px) scale(1.07); } 100% { transform: translate(0, 0) scale(1); } }
+  @keyframes floaty { 0% { transform: translateY(0) rotate(var(--tilt, 0deg)); } 50% { transform: translateY(-10px) rotate(var(--tilt, 0deg)); } 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); } }
+  @keyframes shimmer { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes shine { 0% { left: -60%; } 60%, 100% { left: 130%; } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  @keyframes pulseDot { 0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); } 50% { box-shadow: 0 0 0 9px rgba(99, 102, 241, 0); } }
+
+  html.js .fx { opacity: 0; }
+  html.js .slide.in .fx { animation: fadeUp 0.75s cubic-bezier(0.22, 0.9, 0.3, 1) both; animation-delay: var(--d, 0s); }
+  html.js .fp { opacity: 0; }
+  html.js .slide.in .fp { animation: popIn 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) both; animation-delay: var(--d, 0s); }
+  .deco { animation: drift 11s ease-in-out infinite; }
+  .shimmer { background: linear-gradient(110deg, #6366f1 20%, #a855f7 40%, #ec4899 55%, #6366f1 80%); background-size: 220% 100%;
+             -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 6s ease-in-out infinite; }
+  @media print { html.js .fx, html.js .fp { opacity: 1 !important; animation: none !important; } .deco { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html.js .fx, html.js .fp { opacity: 1 !important; } }
+
+  /* ===== Browser frame (screenshot mockup) ===== */
+  .shot { background: #fff; border: 1px solid #dbe1ee; border-radius: 16px; overflow: hidden;
+          box-shadow: 0 30px 70px -18px rgba(79, 70, 229, 0.28), 0 8px 24px rgba(30, 41, 59, 0.08); }
+  .shot .bar { height: 34px; background: #f6f7fb; border-bottom: 1px solid #e8ecf5; display: flex; align-items: center; gap: 7px; padding: 0 16px; }
+  .shot .bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .shot .bar i:nth-child(1) { background: #fca5a5; } .shot .bar i:nth-child(2) { background: #fcd34d; } .shot .bar i:nth-child(3) { background: #86efac; }
+  .shot .bar .url { margin-left: 10px; flex: 1; height: 20px; border-radius: 999px; background: #fff; border: 1px solid #e8ecf5; color: #94a3b8; font-size: 11.5px; display: flex; align-items: center; padding: 0 12px; }
+  .shot img { width: 100%; display: block; }
+  .floaty { animation: floaty 7s ease-in-out infinite; }
+
+  /* ===== S1 — Title ===== */
+  .s1 { justify-content: center; background: linear-gradient(160deg, #fbfaff 0%, #f3f0ff 55%, #ede9fe 100%); }
+  .s1 .deco.a { width: 500px; height: 500px; background: #c7d2fe; top: -170px; right: -130px; }
+  .s1 .deco.b { width: 420px; height: 420px; background: #ddd6fe; bottom: -180px; left: -110px; }
+  .s1-wrap { display: grid; grid-template-columns: 1.06fr 0.94fr; gap: 48px; align-items: center; }
+  .s1 h1 { font-size: 57px; line-height: 1.09; margin: 12px 0 20px; letter-spacing: -0.015em; }
+  .s1 .tagline { font-size: 18px; color: var(--muted); line-height: 1.55; max-width: 580px; }
+  .s1 .tagline b { color: #4338ca; }
+  .s1 .meta { margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .s1 .chip { padding: 8px 17px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-weight: 600; font-size: 14.5px; color: var(--muted); box-shadow: 0 2px 10px rgba(30,41,59,0.04); }
+  .s1 .shot { --tilt: -1.6deg; transform: rotate(var(--tilt)); }
+  .s1 .badge {
+    position: absolute; top: -16px; right: -14px; background: #fff; border: 1px solid #ddd6fe; border-radius: 12px;
+    padding: 9px 14px; font-size: 13px; font-weight: 700; color: #4338ca; box-shadow: 0 10px 26px rgba(79,70,229,0.18);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .s1 .badge .live { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; animation: pulseDot 1.8s infinite; }
+
+  /* ===== S2 — Problem ===== */
+  .s2 .deco.a { width: 400px; height: 400px; background: #fce7f3; top: -150px; right: -110px; opacity: 0.5; }
+  .s2-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 52px; flex: 1; align-items: center; }
+  .s2 h2 { font-size: 41px; line-height: 1.16; margin-bottom: 16px; letter-spacing: -0.01em; }
+  .s2 .lead { font-size: 18px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+  .quote { border-left: 4px solid var(--indigo); padding: 14px 20px; background: var(--soft); border-radius: 0 14px 14px 0; font-size: 16.5px; line-height: 1.55; color: #3730a3; font-style: italic; }
+  .quote small { display: block; margin-top: 6px; font-style: normal; color: #6366f1; font-weight: 700; font-size: 13px; }
+  .s2-nums { display: flex; gap: 34px; margin-top: 24px; }
+  .s2-nums .n { font-family: 'Space Grotesk'; font-size: 46px; font-weight: 700; line-height: 1; }
+  .s2-nums .l { font-size: 13.5px; color: var(--muted); margin-top: 6px; max-width: 130px; line-height: 1.35; }
+  .pains { display: flex; flex-direction: column; gap: 14px; }
+  .pain { display: flex; gap: 15px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 19px; box-shadow: 0 4px 16px rgba(30, 41, 59, 0.05); }
+  .pain .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--soft); display: grid; place-items: center; font-size: 19px; flex-shrink: 0; }
+  .pain b { font-size: 16px; display: block; margin-bottom: 2px; }
+  .pain span { font-size: 14px; color: var(--muted); line-height: 1.45; }
+
+  /* ===== S3 — Solution ===== */
+  .s3 .deco.a { width: 440px; height: 440px; background: #ddd6fe; bottom: -190px; right: -130px; }
+  .s3 h2 { font-size: 41px; letter-spacing: -0.01em; }
+  .s3 .sub { font-size: 17.5px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+  .flow { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr; gap: 0; align-items: center; flex: 1; margin-bottom: 24px; }
+  .flow .arrow { display: grid; place-items: center; color: #c4b5fd; font-size: 28px; font-weight: 700; }
+  .fcard { background: #fff; border: 1.5px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: 0 4px 16px rgba(30,41,59,0.04); }
+  .fcard .step { width: 34px; height: 34px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; margin-bottom: 12px; animation: pulseDot 2.6s infinite; }
+  .fcard b { font-size: 18px; display: block; margin-bottom: 7px; }
+  .fcard span { font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+  .diff { background: linear-gradient(135deg, #eef2ff, #f5f3ff); border: 1.5px solid #c7d2fe; border-radius: 18px; padding: 19px 26px; display: flex; gap: 16px; align-items: center; }
+  .diff .star { font-size: 26px; }
+  .diff b { color: #3730a3; }
+  .diff span { font-size: 15.5px; color: #4338ca; line-height: 1.5; }
+
+  /* ===== S4 — Product ===== */
+  .s4 .deco.a { width: 380px; height: 380px; background: #cffafe; top: -160px; right: -120px; opacity: 0.45; }
+  .s4-grid { display: grid; grid-template-columns: 0.92fr 1.08fr; gap: 44px; flex: 1; align-items: center; }
+  .s4 h2 { font-size: 33px; line-height: 1.18; margin-bottom: 10px; letter-spacing: -0.01em; }
+  .s4 .lead { font-size: 15.5px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .flist { display: flex; flex-direction: column; gap: 7px; }
+  .fitem { display: flex; gap: 12px; align-items: center; }
+  .fitem .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+  .fitem b { font-size: 14.5px; display: block; }
+  .fitem span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .ic-1 { background: #eef2ff; } .ic-2 { background: #ecfeff; } .ic-3 { background: #f0fdf4; }
+  .ic-4 { background: #fef2f2; } .ic-5 { background: #fffbeb; } .ic-6 { background: #fdf4ff; }
+  .s4 .caption { margin-top: 12px; text-align: center; font-size: 13px; color: var(--muted); }
+  .s4 .caption b { color: #4338ca; }
+
+  /* ===== S5 — Highlights ===== */
+  .s5 { background: linear-gradient(170deg, #fdfcff 0%, #f6f4ff 100%); }
+  .s5 .deco.a { width: 460px; height: 460px; background: #e9d5ff; top: -200px; left: 30%; opacity: 0.4; }
+  .s5 h2 { font-size: 38px; letter-spacing: -0.01em; }
+  .s5 .sub { font-size: 16.5px; color: var(--muted); margin: 8px 0 22px; }
+  .hl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; flex: 1; align-content: start; }
+  .hl { display: flex; flex-direction: column; }
+  .hl .shot { --tilt: 0deg; box-shadow: 0 18px 44px -14px rgba(79, 70, 229, 0.25), 0 4px 14px rgba(30,41,59,0.06); }
+  .hl .shot .bar { height: 24px; } .hl .shot .bar i { width: 8px; height: 8px; }
+  .hl h3 { font-size: 17.5px; margin: 14px 0 6px; display: flex; align-items: center; gap: 8px; }
+  .hl p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .hl p b { color: #4338ca; }
+  .s5 .more { margin-top: 20px; background: #fff; border: 1px dashed #c7d2fe; border-radius: 14px; padding: 12px 20px; font-size: 14px; color: #4338ca; text-align: center; }
+
+  /* ===== S6 — Architecture ===== */
+  .s6 .deco.a { width: 420px; height: 420px; background: #ddd6fe; bottom: -180px; left: -130px; }
+  .arch { display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: center; }
+  .layer { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: center; }
+  .layer .lbl { font-weight: 700; font-size: 15px; color: var(--muted); text-align: right; }
+  .layer .boxes { display: flex; gap: 10px; }
+  .box { flex: 1; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 14.5px; font-weight: 600; text-align: center; }
+  .box small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .box.hi { background: linear-gradient(135deg, #eef2ff, #f5f3ff); border-color: #c7d2fe; }
+  .vline { text-align: center; color: #c4b5fd; font-size: 19px; line-height: 0.6; }
+
+  /* ===== S7 — Stack + Team ===== */
+  .two-col { display: grid; grid-template-columns: 1fr 1.18fr; gap: 46px; flex: 1; align-content: center; }
+  .stack-item { display: flex; gap: 16px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .stack-item:last-child { border-bottom: none; }
+  .stack-item .tag { font-family: 'Space Grotesk'; font-weight: 700; font-size: 13.5px; color: var(--indigo); background: var(--soft); border-radius: 8px; padding: 5px 0; width: 96px; text-align: center; flex-shrink: 0; }
+  .stack-item div b { font-size: 15.5px; display: block; }
+  .stack-item div span { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+  .roles h3, .stack h3 { font-size: 21px; margin-bottom: 12px; }
+  .role { display: flex; gap: 14px; padding: 11px 0; border-bottom: 1px dashed var(--line); align-items: center; }
+  .role:last-child { border-bottom: none; }
+  .role .av { width: 42px; height: 42px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+  .av-1 { background: linear-gradient(135deg, #6366f1, #a855f7); }
+  .av-2 { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+  .av-3 { background: linear-gradient(135deg, #a855f7, #ec4899); }
+  .av-4 { background: linear-gradient(135deg, #10b981, #0ea5e9); }
+  .role b { font-size: 15.5px; display: block; }
+  .role b em { font-style: normal; color: var(--indigo); font-size: 13px; font-weight: 700; margin-left: 6px; }
+  .role span { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+
+  /* ===== S8 — Demo + Impact ===== */
+  .s8 { background: linear-gradient(160deg, #f7f5ff 0%, #f2edff 100%); }
+  .s8 .deco.a { width: 480px; height: 480px; background: #ddd6fe; top: -190px; right: -150px; }
+  .demo-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 26px; }
+  .dstep { background: #fff; border-radius: 16px; padding: 17px; border: 1.5px solid var(--line); box-shadow: 0 4px 14px rgba(30,41,59,0.04); }
+  .dstep .n { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-bottom: 10px; animation: pulseDot 2.8s infinite; }
+  .dstep b { font-size: 15px; display: block; margin-bottom: 4px; }
+  .dstep span { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .imp { background: #fff; border-radius: 16px; padding: 19px; text-align: center; border: 1.5px solid var(--line); }
+  .imp .n { font-family: 'Space Grotesk'; font-size: 33px; font-weight: 700; }
+  .imp .l { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .cta { margin-top: 22px; background: var(--grad); border-radius: 18px; padding: 20px 30px; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: 0 16px 40px -10px rgba(99, 102, 241, 0.45); }
+  .cta .big { font-family: 'Space Grotesk'; font-size: 21px; font-weight: 700; }
+  .cta .small { font-size: 13.5px; opacity: 0.92; margin-top: 3px; }
+  .cta .chips { display: flex; gap: 9px; flex-shrink: 0; }
+  .cta .chip2 { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- ============ SLIDE 1: TITLE ============ -->
+<div class="slide s1">
+  <div class="deco a"></div><div class="deco b"></div>
+  <div class="s1-wrap">
+    <div>
+      <div class="eyebrow fx" style="--d:0s">Hackathon 2026 · Đề tài AI ứng dụng</div>
+      <h1 class="fx" style="--d:.08s"><span class="shimmer">HireMind</span> —<br>Đưa CV của bạn khớp chuẩn xác <span class="grad-text">từng tin tuyển dụng thực tế</span></h1>
+      <p class="tagline fx" style="--d:.16s">Chấm dứt kiểu chấm điểm CV theo khuôn mẫu chung chung. Tải CV lên, dán link vị trí bạn nhắm tới — HireMind <b>bóc tách từng yêu cầu</b> của nhà tuyển dụng: chỉ rõ điểm đạt, lỗ hổng kỹ năng, lộ trình học bù đắp — rồi đưa bạn vào phòng phỏng vấn mô phỏng với AI mang tâm lý như người thật.</p>
+      <div class="meta">
+        <span class="chip fx fp" style="--d:.26s">⏱ Báo cáo sẵn sàng sau ~2 phút</span>
+        <span class="chip fx fp" style="--d:.34s">🔓 Không cần tạo tài khoản</span>
+        <span class="chip fx fp" style="--d:.42s">🇻🇳 Cho thị trường tuyển dụng Việt Nam</span>
+      </div>
+    </div>
+    <div class="fx fp" style="--d:.3s; position: relative;">
+      <div class="shot floaty">
+        <div class="bar"><i></i><i></i><i></i><div class="url">hiremind.app/s/0f720050425a</div></div>
+        <img src="assets/hero.jpg" alt="HireMind landing">
+      </div>
+      <div class="badge"><span class="live"></span> Prototype chạy thật 100%</div>
+    </div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">01</div>
+</div>
+
+<!-- ============ SLIDE 2: PROBLEM ============ -->
+<div class="slide s2">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Bài toán</div>
+  <div class="s2-grid">
+    <div>
+      <h2 class="fx" style="--d:.06s">Hàng trăm nghìn CV nộp đi mỗi tháng — nhưng phần lớn ứng viên bị loại <span class="grad-text">mà không rõ lý do</span></h2>
+      <p class="lead fx" style="--d:.14s">Các công cụ hiện nay chỉ chấm điểm CV một cách cô lập, chung chung — hoàn toàn tách rời ngữ cảnh của tin tuyển dụng cụ thể. Ứng viên loay hoay tự sửa theo cảm tính, tiếp tục ứng tuyển và nhận lại sự im lặng.</p>
+      <div class="quote fx" style="--d:.22s">"Tôi nộp 40 CV trong 2 tháng, chỉ nhận được 2 mail từ chối. Không ai nói cho tôi biết phải sửa cái gì."
+        <small>— một ứng viên mới ra trường</small>
+      </div>
+      <div class="s2-nums">
+        <div class="fx" style="--d:.3s"><div class="n grad-text"><span class="num" data-to="40">40</span></div><div class="l">CV đã nộp, không có hướng dẫn nào kèm theo</div></div>
+        <div class="fx" style="--d:.38s"><div class="n grad-text"><span class="num" data-to="2">2</span></div><div class="l">phản hồi nhận được — đều là mail tự động</div></div>
+      </div>
+    </div>
+    <div class="pains">
+      <div class="pain fx" style="--d:.18s"><div class="ic">📄</div><div><b>Lệch pha với bộ lọc ATS</b><span>Nhà tuyển dụng quét từ khóa sát JD — ứng viên không biết hồ sơ đang thiếu kỹ năng trọng yếu nào</span></div></div>
+      <div class="pain fx" style="--d:.26s"><div class="ic">📉</div><div><b>Sự im lặng từ nhà tuyển dụng</b><span>Hầu hết hồ sơ bị từ chối tự động, không một lời giải thích — ứng viên mất định hướng cải thiện</span></div></div>
+      <div class="pain fx" style="--d:.34s"><div class="ic">🎓</div><div><b>Thiếu lộ trình bù đắp</b><span>Sinh viên và người chuyển ngành không biết cần bổ sung kiến thức gì để đạt chuẩn thị trường</span></div></div>
+      <div class="pain fx" style="--d:.42s"><div class="ic">🎤</div><div><b>Áp lực phòng phỏng vấn</b><span>Thiếu môi trường thực chiến an toàn để làm quen tình huống và tâm lý trước buổi gặp thật</span></div></div>
+    </div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">02</div>
+</div>
+
+<!-- ============ SLIDE 3: SOLUTION ============ -->
+<div class="slide s3">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Giải pháp</div>
+  <h2 class="fx" style="--d:.05s">Một đường link duy nhất — <span class="grad-text">trọn vẹn hành trình chinh phục nhà tuyển dụng</span></h2>
+  <p class="sub fx" style="--d:.1s">Từ "bản CV trong điện thoại" đến "tâm thế vững vàng bước vào phòng phỏng vấn" — gói gọn trong một phiên làm việc, không rào cản đăng nhập.</p>
+  <div class="flow">
+    <div class="fcard fx" style="--d:.16s">
+      <div class="step">1</div>
+      <b>Đưa vào CV &amp; đường link JD</b>
+      <span>Hỗ trợ mọi định dạng: PDF, DOCX, ảnh chụp từ điện thoại. Chỉ cần dán link TopCV/ITviec — hệ thống tự động bóc tách nội dung tin tuyển dụng.</span>
+    </div>
+    <div class="arrow fx" style="--d:.24s">→</div>
+    <div class="fcard fx" style="--d:.28s">
+      <div class="step">2</div>
+      <b>AI bóc tách &amp; đối chiếu đa chiều</b>
+      <span>Vision OCR đọc hiểu cả CV bản scan, so sánh từng điều kiện tuyển dụng — mọi nhận xét đều đi kèm bằng chứng trích dẫn trực tiếp từ CV.</span>
+    </div>
+    <div class="arrow fx" style="--d:.36s">→</div>
+    <div class="fcard fx" style="--d:.4s">
+      <div class="step">3</div>
+      <b>Báo cáo toàn diện &amp; lộ trình hành động</b>
+      <span>Điểm tương thích ATS, phân tích skill gap, lộ trình học bù đắp, AI Coach, phỏng vấn mô phỏng, thư ứng tuyển — tất cả lưu trên một liên kết chia sẻ được.</span>
+    </div>
+  </div>
+  <div class="diff fx" style="--d:.5s">
+    <div class="star">🎯</div>
+    <div><b>Điểm khác biệt:</b> <span>đối chiếu với <b>đúng tin tuyển dụng</b> ứng viên nhắm tới — mỗi JD một kết quả, không phải con điểm chung chung. Mọi nhận xét đều trích dẫn bằng chứng, mọi lỗ hổng đều có cách bù đắp.</span></div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">03</div>
+</div>
+
+<!-- ============ SLIDE 4: PRODUCT ============ -->
+<div class="slide s4">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Sản phẩm thật — không phải mockup</div>
+  <div class="s4-grid">
+    <div>
+      <h2 class="fx" style="--d:.05s">Dashboard 7 phân hệ chuyên sâu — <span class="grad-text">toàn quyền truy cập qua một liên kết</span></h2>
+      <p class="lead fx" style="--d:.1s">Tải hồ sơ lên là có ngay một trang phiên riêng, mở lại được từ bất kỳ đâu. Không đăng ký, không mật khẩu.</p>
+      <div class="flist">
+        <div class="fitem fx" style="--d:.16s"><div class="ic ic-1">👁️</div><div><b>Tiếp nhận dữ liệu đa nền tảng</b><span>Vision OCR nhận diện văn bản, bản scan, ảnh chụp nhiều trang</span></div></div>
+        <div class="fitem fx" style="--d:.22s"><div class="ic ic-2">🔗</div><div><b>Trích xuất JD tự động</b><span>TopCV, ITviec… qua 3 tầng fetch — vượt cả bảo vệ Cloudflare bằng headless browser</span></div></div>
+        <div class="fitem fx" style="--d:.28s"><div class="ic ic-3">📊</div><div><b>Dự báo xác suất trúng tuyển</b><span>"5% cơ hội đỗ" + nguyên nhân cốt tử + việc cần làm để lật ngược tình thế</span></div></div>
+        <div class="fitem fx" style="--d:.34s"><div class="ic ic-4">🧭</div><div><b>Gợi ý hướng đi phù hợp hơn</b><span>Điểm quá thấp hoặc lệch hướng — AI đề xuất vị trí khác CV có lợi thế, kèm tỉ lệ phù hợp</span></div></div>
+        <div class="fitem fx" style="--d:.4s"><div class="ic ic-5">🗺️</div><div><b>Lộ trình bù đắp kỹ năng cá nhân hóa</b><span>Xếp ưu tiên: học gì, nguồn ở đâu, ước tính bao lâu</span></div></div>
+        <div class="fitem fx" style="--d:.46s"><div class="ic ic-6">✉️</div><div><b>Hệ sinh thái chuẩn bị phỏng vấn</b><span>AI Coach giải đáp, phỏng vấn mô phỏng 8 cảm xúc, thư ứng tuyển tự động</span></div></div>
+      </div>
+    </div>
+    <div class="fx fp" style="--d:.2s">
+      <div class="shot">
+        <div class="bar"><i></i><i></i><i></i><div class="url">hiremind.app/s/0f720050425a — phiên thật</div></div>
+        <img src="assets/dashboard.jpg" alt="Session dashboard">
+      </div>
+      <div class="caption">Phiên thật: CV ngành <b>Tài chính</b> ứng tuyển vị trí <b>Tech Lead NodeJS</b> — ATS 4/100, lộ trình 6 bước</div>
+    </div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">04</div>
+</div>
+
+<!-- ============ SLIDE 5: HIGHLIGHTS ============ -->
+<div class="slide s5">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Điểm nhấn độc nhất</div>
+  <h2 class="fx" style="--d:.05s">Mô phỏng chân thực tâm lý phỏng vấn — <span class="grad-text">đưa ra sự thật thay vì lời làm hài lòng</span></h2>
+  <p class="sub fx" style="--d:.1s">Ba tính năng chưa từng xuất hiện trên bất kỳ công cụ chấm CV nào hiện nay.</p>
+  <div class="hl-grid">
+    <div class="hl fx" style="--d:.16s">
+      <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="assets/mood.jpg" alt="Mood interviewer"></div>
+      <h3>🎭 8 trạng thái cảm xúc của nhà tuyển dụng</h3>
+      <p>Mô phỏng từ cởi mở, hoài nghi, thăm dò đến <b>tạo áp lực (stress interview)</b>… Giao diện phản ánh trực tiếp biểu cảm người phỏng vấn, kèm chỉ dẫn tâm lý giúp ứng viên ứng biến linh hoạt.</p>
+    </div>
+    <div class="hl fx" style="--d:.26s">
+      <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="assets/altpath.jpg" alt="Gợi ý hướng đi khác"></div>
+      <h3>🧭 Điểm thấp? AI chỉ đường khác</h3>
+      <p>Khi hồ sơ lệch hướng, AI đề xuất <b>những vị trí CV thực sự có lợi thế hơn</b> — kèm tỉ lệ phù hợp, bằng chứng từ CV và điều cần chuẩn bị nếu chuyển hướng.</p>
+    </div>
+    <div class="hl fx" style="--d:.36s">
+      <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="assets/blunt.jpg" alt="Blunt verdict"></div>
+      <h3>🔥 Nhận xét thẳng thắn từ góc nhìn tuyển dụng</h3>
+      <p>Kết thúc buổi luyện, hệ thống tổng kết đúng suy nghĩ thật của người phỏng vấn: <b>vì sao hồ sơ này bị loại</b> và ấn tượng đọng lại sau cuộc trò chuyện.</p>
+    </div>
+  </div>
+  <div class="more fx" style="--d:.48s">✨ Còn nữa: đóng tab giữa chờ AI mà không mất tiến trình · lưu &amp; xem lại lịch sử buổi phỏng vấn · xuất báo cáo Word (.docx) · chat gửi được ảnh</div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">05</div>
+</div>
+
+<!-- ============ SLIDE 6: ARCHITECTURE ============ -->
+<div class="slide s6">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Kiến trúc công nghệ</div>
+  <h2 class="fx" style="--d:.05s">Kiến trúc xử lý bất đồng bộ — <span class="grad-text">trải nghiệm mượt mà, không gián đoạn</span></h2>
+  <div class="arch">
+    <div class="layer fx" style="--d:.14s">
+      <div class="lbl">Browser (SPA)</div>
+      <div class="boxes">
+        <div class="box">Landing + Wizard<small>pdf.js parse PDF client-side</small></div>
+        <div class="box">Session Dashboard<small>7 tabs · light/dark mode</small></div>
+        <div class="box">Poll 2.5s<small>tiến độ realtime</small></div>
+      </div>
+    </div>
+    <div class="vline fx" style="--d:.2s">▼</div>
+    <div class="layer fx" style="--d:.24s">
+      <div class="lbl">Server (Node.js)</div>
+      <div class="boxes">
+        <div class="box hi">REST API<small>Express · upload · poll</small></div>
+        <div class="box hi">Pipeline nền<small>extract → validate → JD → analyze</small></div>
+        <div class="box">File store<small>data/&lt;id&gt;/session.json</small></div>
+      </div>
+    </div>
+    <div class="vline fx" style="--d:.3s">▼</div>
+    <div class="layer fx" style="--d:.34s">
+      <div class="lbl">Nguồn ngoài</div>
+      <div class="boxes">
+        <div class="box">AI API<small>OpenAI-compatible · vision OCR</small></div>
+        <div class="box">JD Fetcher<small>direct → jina.ai → Chromium</small></div>
+        <div class="box">Job boards<small>TopCV · ITviec · VietnamWorks</small></div>
+      </div>
+    </div>
+  </div>
+  <div class="diff fx" style="--d:.46s">
+    <div class="star">⚡</div>
+    <div><span>Hệ thống phân tách tác vụ nền: ứng viên nhận đường link phiên <b>ngay khi tải hồ sơ lên</b> — an tâm đóng tab hay rời máy, server vẫn tiếp tục bóc tách và phân tích ngầm. Mở lại liên kết, toàn bộ trạng thái và kết quả được khôi phục nguyên vẹn.</span></div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">06</div>
+</div>
+
+<!-- ============ SLIDE 7: TECH STACK + TEAM ============ -->
+<div class="slide s7">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Công nghệ &amp; phân công</div>
+  <h2 class="fx" style="--d:.05s" style="font-size:40px;">Tech Stack &amp; phân công công việc</h2>
+  <div class="two-col">
+    <div class="stack">
+      <h3 class="fx" style="--d:.1s">Công nghệ</h3>
+      <div class="stack-item fx" style="--d:.16s"><span class="tag">Backend</span><div><b>Node.js + Express</b><span>REST API, upload, pipeline nền — một process duy nhất</span></div></div>
+      <div class="stack-item fx" style="--d:.22s"><span class="tag">AI</span><div><b>OpenAI-compatible API</b><span>Text phân tích + vision OCR; đổi provider chỉ cần 3 biến môi trường</span></div></div>
+      <div class="stack-item fx" style="--d:.28s"><span class="tag">Frontend</span><div><b>Vanilla JS SPA</b><span>Không build step; pdf.js client-side; design tokens light/dark</span></div></div>
+      <div class="stack-item fx" style="--d:.34s"><span class="tag">JD Fetch</span><div><b>fetch → jina.ai → Playwright</b><span>Headless Chromium vượt Cloudflare của TopCV/ITviec</span></div></div>
+      <div class="stack-item fx" style="--d:.4s"><span class="tag">Storage</span><div><b>File-based JSON</b><span>Mỗi phiên một thư mục — không database, không login</span></div></div>
+    </div>
+    <div class="roles">
+      <h3 class="fx" style="--d:.14s">Đội ngũ thực hiện</h3>
+      <div class="role fx" style="--d:.2s"><div class="av av-1">Tú</div><div><b>Tạ Tuấn Tú <em>👥 Trưởng nhóm</em></b><span>Product &amp; AI Pipeline — định hình sản phẩm, tối ưu Prompt Engineering, phát triển luồng phân tích dữ liệu 4 giai đoạn</span></div></div>
+      <div class="role fx" style="--d:.28s"><div class="av av-2">Đạt</div><div><b>Nguyễn Mạnh Đạt</b><span>Backend &amp; Data Extraction — REST API Express, cơ chế 3 tầng trích xuất vượt Cloudflare, lưu trữ dữ liệu tinh gọn</span></div></div>
+      <div class="role fx" style="--d:.36s"><div class="av av-3">Hải</div><div><b>Đặng Văn Hải</b><span>Frontend &amp; UX/UI — Single Page App, dashboard 7 phân hệ, Design System đa giao diện (Light/Dark)</span></div></div>
+      <div class="role fx" style="--d:.44s"><div class="av av-4">Thiện</div><div><b>Đinh Hoàng Thiện</b><span>QA &amp; Product Delivery — kiểm thử End-to-End đa định dạng, tài liệu dự án, kịch bản Demo thực chiến</span></div></div>
+    </div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">07</div>
+</div>
+
+<!-- ============ SLIDE 8: DEMO + IMPACT ============ -->
+<div class="slide s8">
+  <div class="deco a"></div>
+  <div class="eyebrow fx">Demo &amp; tác động</div>
+  <h2 class="fx" style="--d:.05s">Trải nghiệm thực tế trong 60 giây — <span class="grad-text">hiệu quả đo lường tức thì</span></h2>
+  <div class="demo-steps">
+    <div class="dstep fx" style="--d:.14s"><div class="n">1</div><b>Nạp hồ sơ</b><span>Tải trực tiếp ảnh chụp CV từ điện thoại — không cần file mẫu chuẩn</span></div>
+    <div class="dstep fx" style="--d:.22s"><div class="n">2</div><b>Nhập chỉ tiêu</b><span>Dán liên kết công việc thực tế — Tech Lead NodeJS trên TopCV</span></div>
+    <div class="dstep fx" style="--d:.3s"><div class="n">3</div><b>Nhận chẩn đoán</b><span>ATS 4/100 — chỉ rõ việc lệch ngành Tài chính → Tech Lead và 6 năng lực còn thiếu</span></div>
+    <div class="dstep fx" style="--d:.38s"><div class="n">4</div><b>Hành động tức thì</b><span>Lộ trình 6 bước nâng cấp, phỏng vấn mô phỏng kèm phản hồi tâm lý, thư ứng tuyển</span></div>
+  </div>
+  <div class="impact">
+    <div class="imp fx" style="--d:.46s"><div class="n grad-text">7 trong 1</div><div class="l">trọn bộ thẩm định, tư vấn, luyện tập — chỉ trong một liên kết</div></div>
+    <div class="imp fx" style="--d:.54s"><div class="n grad-text"><span class="num" data-to="0">0</span>s</div><div class="l">chờ đợi thụ động — xử lý ngầm trên server, không ép nhìn màn hình loading</div></div>
+    <div class="imp fx" style="--d:.62s"><div class="n grad-text"><span class="num" data-to="100">100</span>%</div><div class="l">khả thi &amp; tự do tiếp cận — chạy thật với AI, không mockup, không phí, không đăng ký</div></div>
+  </div>
+  <div class="cta fx" style="--d:.72s">
+    <div>
+      <div class="big">HireMind — Chấm dứt kỷ nguyên nộp CV trong vô vọng.</div>
+      <div class="small">Đối chiếu chuẩn xác · Phỏng vấn thực tế · Phản hồi trung thực</div>
+    </div>
+    <div class="chips">
+      <span class="chip2">🌐 localhost:3000</span>
+      <span class="chip2">👥 Nhóm 4 thành viên</span>
+      <span class="chip2">🤖 OpenAI-compatible</span>
+    </div>
+  </div>
+  <div class="brand"><span class="dot">H</span> HireMind</div><div class="pagenum">08</div>
+</div>
+
+<script>
+  document.documentElement.classList.add('js');
+  // Reveal on scroll — every slide animates in as it enters the viewport
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.slide').forEach(s => io.observe(s));
+
+  // Count-up numbers (HTML already holds final value — JS-safe fallback)
+  function countUp(el) {
+    const to = parseInt(el.dataset.to, 10); if (!to) return;
+    const t0 = performance.now(), dur = 1100;
+    function tick(t) {
+      const p = Math.min((t - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(to * e);
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  setTimeout(() => document.querySelectorAll('.num').forEach(countUp), 700);
+</script>
+</body>
+</html>

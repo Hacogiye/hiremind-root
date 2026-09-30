@@ -1,0 +1,660 @@
+/* ============================================================
+   HireMind — Session page (results dashboard)
+   ============================================================ */
+/* Session dùng container rộng hơn landing để tận dụng màn hình lớn */
+.session-body .container-narrow { max-width: 1160px; }
+.session-header {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.session-header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 12px; }
+.session-title { min-width: 0; }
+.session-title .t { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-title .s { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.session-body { padding: 28px 0 80px; }
+
+/* ---------- Loading state ---------- */
+.session-loading { text-align: center; padding: 90px 0; }
+
+/* ---------- Error state ---------- */
+.error-panel {
+  max-width: 620px; margin: 60px auto;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 40px; text-align: center;
+}
+.error-panel .e-icon {
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px;
+  background: var(--danger-soft); color: var(--danger);
+  display: grid; place-items: center;
+}
+
+/* ---------- Hero score area ---------- */
+.result-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px 36px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .result-hero { grid-template-columns: 1fr; text-align: center; justify-items: center; } }
+
+.rh-main { min-width: 0; }
+.rh-main .rh-name { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; line-height: 1.2; }
+.rh-main .rh-title { color: var(--muted); margin-top: 4px; }
+.rh-main .rh-summary { margin-top: 14px; font-size: 0.98rem; color: var(--fg-soft); }
+.rh-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+
+/* Score pill — cột dọc (số trên, vạch tiến độ dưới) thay vì ring dễ tràn */
+.score-pill {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  width: 168px;
+  padding: 26px 20px;
+  border-radius: 20px;
+  background: var(--grad-soft);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  flex-shrink: 0;
+}
+@media (max-width: 900px) { .score-pill { width: 100%; flex-direction: row; justify-content: space-between; padding: 18px 24px; } }
+.score-pill .sp-label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.score-pill .sp-num { display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+.score-pill .sp-num .num { font-family: var(--font-head); font-size: 3.2rem; font-weight: 700; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.score-pill .sp-num .den { font-size: 1rem; color: var(--muted); font-weight: 600; }
+.score-pill .sp-bar { width: 100%; height: 7px; background: rgba(99, 102, 241, 0.15); border-radius: 999px; overflow: hidden; }
+.score-pill .sp-bar .fill { height: 100%; width: 0; background: var(--grad); border-radius: 999px; transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.rh-jd {
+  text-align: center;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--grad-soft);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  min-width: 200px;
+  max-width: 240px;
+}
+.rh-jd .jd-num { font-family: var(--font-head); font-size: 2.6rem; font-weight: 700; line-height: 1; }
+.rh-jd .jd-lbl { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+@media (max-width: 900px) { .rh-jd { min-width: 0; width: 100%; } }
+
+/* ---------- Pass gauge (khả năng đậu phỏng vấn) ---------- */
+.pass-gauge {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1.5px solid var(--border-strong);
+}
+.pass-very-likely { border-color: rgba(16,185,129,0.4); }
+.pass-likely { border-color: rgba(16,185,129,0.4); }
+.pass-uncertain { border-color: rgba(217,119,6,0.4); }
+.pass-unlikely { border-color: rgba(225,29,72,0.4); }
+.pass-very-unlikely { border-color: rgba(220,38,38,0.45); background: var(--danger-soft); }
+.pg-head { font-size: 0.76rem; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.pg-emoji { font-size: 0.95rem; }
+.pg-pct { font-family: var(--font-head); font-size: 2rem; font-weight: 700; line-height: 1.15; }
+.pass-very-likely .pg-pct, .pass-likely .pg-pct { color: var(--accent); }
+.pass-uncertain .pg-pct { color: var(--warn); }
+.pass-unlikely .pg-pct, .pass-very-unlikely .pg-pct { color: var(--danger); }
+.pg-verdict { font-size: 0.78rem; color: var(--fg-soft); font-weight: 600; }
+
+/* ---------- Hire assessment panel (overview) ---------- */
+.hire-panel { border-left: 4px solid var(--hire-color, var(--danger)); }
+.hire-head { display: flex; gap: 24px; align-items: flex-start; }
+@media (max-width: 700px) { .hire-head { flex-direction: column; } }
+.hire-pct-wrap { text-align: center; flex-shrink: 0; min-width: 120px; }
+.hire-pct { font-family: var(--font-head); font-size: 3.2rem; font-weight: 700; line-height: 1; }
+.hire-pct-sub { font-size: 0.78rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.hire-body { flex: 1; min-width: 0; }
+.hire-headline { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+.hire-reasons { display: flex; flex-direction: column; gap: 2px; }
+.hire-raise {
+  margin-top: 14px; padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+/* ---------- Alternative paths (gợi ý hướng đi khác) ---------- */
+.alt-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.alt-path-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ap-head { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; }
+.ap-role { font-family: var(--font-head); font-weight: 700; font-size: 0.95rem; color: var(--fg); }
+.ap-fit { font-family: var(--font-head); font-weight: 700; font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
+.ap-why { font-size: 0.87rem; color: var(--fg-soft); line-height: 1.5; }
+.ap-note { font-size: 0.83rem; color: var(--muted); line-height: 1.45; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+/* ---------- Blunt verdict (PV nói thật) ---------- */
+.blunt-box {
+  margin-top: 18px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.06));
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
+  position: relative;
+}
+.blunt-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
+.blunt-emoji { font-size: 1.9rem; line-height: 1; }
+.blunt-title {
+  font-family: var(--font-head); font-weight: 700; font-size: 1rem;
+  color: var(--primary);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.blunt-mood { font-size: 0.88rem; color: var(--fg-soft); margin-top: 2px; }
+.blunt-pass { margin-left: auto; text-align: center; flex-shrink: 0; }
+.blunt-pass .bp-num { font-family: var(--font-head); font-size: 1.9rem; font-weight: 700; line-height: 1; color: var(--hire-color, var(--danger)); }
+.blunt-pass .bp-lbl { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 3px; }
+.blunt-text {
+  font-size: 1rem; line-height: 1.65;
+  font-style: italic;
+  color: var(--fg);
+  padding: 14px 18px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+}
+
+/* ---------- Alternative path note trong báo cáo PV (mềm, không chói) ---------- */
+.iv-altpath-note {
+  margin-top: 16px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--primary);
+}
+.iap-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.iap-icon { font-size: 1.2rem; line-height: 1; }
+.iap-title {
+  font-family: var(--font-head); font-weight: 700; font-size: 0.95rem;
+  color: var(--fg); letter-spacing: 0.01em;
+}
+.iap-text { margin: 0; font-size: 0.95rem; line-height: 1.65; color: var(--fg-soft); }
+
+/* ---------- Report summary blocks (mạnh/yếu/chấm từng phần) ---------- */
+.iv-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+.iv-sum-col { display: flex; flex-direction: column; gap: 14px; }
+.iv-sum-block {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-top: 3px solid var(--border-strong);
+}
+.iv-sum-green { border-top-color: var(--accent); }
+.iv-sum-red { border-top-color: var(--danger); }
+.iv-sum-amber { border-top-color: var(--warn); }
+.iv-sum-title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-head); font-weight: 700; font-size: 0.95rem;
+  color: var(--fg); margin-bottom: 10px;
+}
+.iv-sum-title .count {
+  margin-left: auto;
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--muted);
+  background: var(--bg-soft);
+  border-radius: 999px; padding: 2px 9px;
+}
+.iv-sum-ic { font-size: 0.9rem; }
+
+/* ---------- Report actions (2 nút phân biệt rõ) ---------- */
+.report-actions {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px dashed var(--border-strong);
+}
+.report-actions .btn { display: inline-flex; align-items: center; gap: 8px; }
+.report-actions svg { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .iv-summary { grid-template-columns: 1fr; }
+  .report-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* ---------- AI disclaimer (ghi chú tham khảo, mờ, không nổi bật) ---------- */
+.ai-disclaimer {
+  display: flex; align-items: center; gap: 6px;
+  max-width: 1120px;
+  margin: 10px auto 0;
+  padding: 0 4px;
+  font-size: 0.74rem;
+  color: var(--muted-2);
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.verdict-chip { display: inline-flex; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+.verdict-excellent { background: var(--accent-soft); color: var(--accent); }
+.verdict-good { background: var(--info-soft); color: var(--info); }
+.verdict-moderate { background: var(--warn-soft); color: var(--warn); }
+.verdict-weak { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Breakdown bars ---------- */
+.bd-row { display: grid; grid-template-columns: 130px 1fr 44px; gap: 14px; align-items: center; margin-bottom: 14px; }
+.bd-row:last-child { margin-bottom: 0; }
+.bd-row .bd-lbl { font-size: 0.9rem; font-weight: 600; }
+.bd-row .bd-val { font-family: var(--font-head); font-weight: 700; text-align: right; font-size: 0.95rem; }
+
+/* ---------- Generic panels ---------- */
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 26px 28px; }
+.panel-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 700; font-size: 1.08rem; margin-bottom: 18px; }
+.panel-title .pt-icon {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+  background: var(--primary-soft); color: var(--primary);
+}
+.panel-title .pt-icon.green { background: var(--accent-soft); color: var(--accent); }
+.panel-title .pt-icon.red { background: var(--danger-soft); color: var(--danger); }
+.panel-title .pt-icon.amber { background: var(--warn-soft); color: var(--warn); }
+.panel-title .pt-icon.sky { background: var(--info-soft); color: var(--info); }
+.panel-title .count {
+  margin-left: auto; font-family: var(--font-body); font-size: 0.8rem; font-weight: 700;
+  background: var(--bg-soft); color: var(--muted); padding: 3px 10px; border-radius: 999px;
+}
+
+/* ---------- Strength/weakness items ---------- */
+.sw-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.sw-item:last-child { border-bottom: none; padding-bottom: 0; }
+.sw-item .sw-icon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; }
+.sw-item.pos .sw-icon { background: var(--accent-soft); color: var(--accent); }
+.sw-item.neg .sw-icon { background: var(--danger-soft); color: var(--danger); }
+.sw-item .sw-body .sw-point { font-weight: 600; font-size: 0.95rem; }
+.sw-item .sw-body .sw-evidence { font-size: 0.86rem; color: var(--muted); margin-top: 3px; font-style: italic; }
+.sw-item .sw-body .sw-fix { font-size: 0.86rem; margin-top: 6px; padding: 8px 12px; background: var(--info-soft); color: var(--info); border-radius: 8px; }
+
+/* ---------- Improvement list ---------- */
+.imp-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px dashed var(--border); }
+.imp-item:last-child { border-bottom: none; }
+.imp-pri { flex-shrink: 0; align-self: flex-start; }
+.imp-body .imp-title { font-weight: 700; font-size: 0.98rem; }
+.imp-body .imp-detail { font-size: 0.9rem; color: var(--fg-soft); margin-top: 4px; }
+.imp-body .imp-impact { font-size: 0.83rem; color: var(--muted); margin-top: 5px; display: flex; gap: 6px; align-items: flex-start; }
+
+/* ---------- Red flags ---------- */
+.flag-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; font-size: 0.93rem; }
+.flag-item .flag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); margin-top: 8px; flex-shrink: 0; }
+
+/* ---------- JD match ---------- */
+.match-req { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px dashed var(--border); }
+.match-req:last-child { border-bottom: none; }
+.match-icon { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; margin-top: 1px; }
+.match-icon.ok { background: var(--accent-soft); color: var(--accent); }
+.match-icon.miss { background: var(--danger-soft); color: var(--danger); }
+.match-icon.nice { background: var(--warn-soft); color: var(--warn); }
+.match-body .m-req { font-weight: 600; font-size: 0.95rem; }
+.match-body .m-ev { font-size: 0.86rem; color: var(--muted); margin-top: 3px; font-style: italic; }
+.match-body .m-note { font-size: 0.86rem; color: var(--fg-soft); margin-top: 3px; }
+.match-body .m-sev { margin-top: 6px; }
+
+/* ---------- Roadmap ---------- */
+.roadmap { position: relative; padding-left: 30px; }
+.roadmap::before {
+  content: ''; position: absolute; left: 11px; top: 12px; bottom: 12px;
+  width: 2px; background: linear-gradient(180deg, #6366f1, #a855f7);
+  border-radius: 2px; opacity: 0.5;
+}
+.rm-step { position: relative; padding: 0 0 26px 18px; }
+.rm-step:last-child { padding-bottom: 0; }
+.rm-dot {
+  position: absolute; left: -30px; top: 2px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--grad); color: #fff;
+  font-size: 0.75rem; font-weight: 700;
+  display: grid; place-items: center;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.4);
+}
+.rm-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rm-head .rm-skill { font-weight: 700; font-size: 1rem; }
+.rm-head .rm-dur { margin-left: auto; font-size: 0.8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.rm-why { font-size: 0.88rem; color: var(--fg-soft); margin-top: 5px; }
+.rm-how { font-size: 0.86rem; color: var(--muted); margin-top: 4px; padding: 8px 12px; background: var(--bg-soft); border-radius: 8px; }
+
+/* ---------- Hard questions ---------- */
+.hq-item { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px dashed var(--border); }
+.hq-item:last-of-type { border-bottom: none; }
+.hq-num {
+  width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
+  background: var(--grad); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.85rem;
+}
+.hq-item .hq-q { font-size: 0.95rem; font-weight: 500; }
+.hq-cta {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.hq-cta-note { font-size: 0.82rem; color: var(--muted); }
+
+/* ---------- CV original (details) ---------- */
+.cv-clean {
+  white-space: pre-wrap; word-break: break-word;
+  font-size: 0.9rem; line-height: 1.65; color: var(--fg-soft);
+  max-height: 520px; overflow-y: auto;
+  padding: 18px; background: var(--bg-soft); border-radius: 12px;
+}
+
+/* ---------- Skills chips ---------- */
+.skill-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.skill-chip {
+  padding: 6px 14px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ---------- Interview ---------- */
+.interview-phase-start { text-align: center; padding: 60px 20px; }
+.interview-report { }
+.report-score-row { display: flex; gap: 24px; align-items: center; margin-bottom: 22px; flex-wrap: wrap; }
+.qf-item { padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.qf-item:last-child { border-bottom: none; }
+.qf-head { display: flex; align-items: center; gap: 10px; }
+.qf-head .qf-topic { font-weight: 700; font-size: 0.95rem; }
+.qf-head .qf-score { margin-left: auto; font-family: var(--font-head); font-weight: 700; }
+.qf-comment { font-size: 0.88rem; color: var(--fg-soft); margin-top: 4px; }
+
+/* ---------- Cover letter ---------- */
+.cl-options { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; align-items: flex-end; }
+.cl-result { margin-top: 20px; }
+.cl-letter {
+  white-space: pre-wrap; line-height: 1.7; font-size: 0.95rem;
+  padding: 24px; background: var(--bg-soft); border-radius: 14px;
+  border: 1px solid var(--border);
+  max-height: 480px; overflow-y: auto;
+}
+.cl-subject { font-weight: 700; margin-bottom: 12px; padding: 12px 16px; background: var(--primary-soft); border-radius: 10px; color: var(--primary); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--fg); color: var(--bg);
+  padding: 12px 22px; border-radius: 12px;
+  font-weight: 600; font-size: 0.9rem;
+  opacity: 0; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 100; box-shadow: var(--shadow-strong);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- Tab panes ---------- */
+.tab-pane { animation: paneIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.tab-pane.no-anim { animation: none; }
+@keyframes paneIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tab-pane { animation: none; } }
+
+/* ---------- Interview: top bar (mood + actions) ---------- */
+.iv-topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.iv-topbar-actions { display: flex; gap: 8px; margin-left: auto; }
+
+.mood-bar { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.mood-bar:not(.visible) { visibility: hidden; }
+.mood-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 700; font-size: 0.85rem;
+  cursor: help;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease;
+}
+.mood-badge .mood-emoji { font-size: 1.05rem; line-height: 1; }
+.mood-green { background: var(--accent-soft); color: var(--accent); border-color: rgba(16,185,129,0.25); }
+.mood-sky { background: var(--info-soft); color: var(--info); border-color: rgba(2,132,199,0.22); }
+.mood-amber { background: var(--warn-soft); color: var(--warn); border-color: rgba(217,119,6,0.25); }
+.mood-red { background: var(--danger-soft); color: var(--danger); border-color: rgba(220,38,38,0.25); }
+.mood-tip {
+  font-size: 0.8rem; color: var(--muted); max-width: 420px; line-height: 1.4;
+}
+.mood-bar.flash .mood-badge { animation: moodFlash 0.9s ease; }
+@keyframes moodFlash {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Mood badge nhỏ trong từng câu của interviewer */
+.iv-mood-row { margin-bottom: 4px; }
+.iv-mood-row .mood-badge { font-size: 0.72rem; padding: 3px 10px; }
+.iv-mood-row .mood-emoji { font-size: 0.9rem; }
+
+/* Nền vùng chat đổi màu theo cảm xúc PV — tint rõ + viền cùng màu, chuyển mượt 1.2s */
+#interviewArea .chat-wrap {
+  border-radius: 16px;
+  padding: 4px 14px 14px;
+  border: 1px solid transparent;
+  transition: background 1.2s ease, border-color 1.2s ease;
+}
+#interviewArea .chat-wrap.mood-tint-green {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+#interviewArea .chat-wrap.mood-tint-sky {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--info) 22%, transparent), color-mix(in srgb, var(--info) 10%, transparent));
+  border-color: color-mix(in srgb, var(--info) 45%, transparent);
+}
+#interviewArea .chat-wrap.mood-tint-amber {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warn) 24%, transparent), color-mix(in srgb, var(--warn) 11%, transparent));
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+}
+#interviewArea .chat-wrap.mood-tint-red {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 22%, transparent), color-mix(in srgb, var(--danger) 10%, transparent));
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) { #interviewArea .chat-wrap { transition: none; } }
+
+/* Màn "đang tổng hợp báo cáo" sau khi bấm Kết thúc */
+.ending-meta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ending-meta .proc-chip {
+  display: inline-flex; align-items: center;
+  padding: 7px 16px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  font-size: 0.85rem; font-weight: 600; color: var(--muted);
+}
+
+/* ---------- Interview: resume note + history ---------- */
+.iv-resume-note {
+  text-align: center;
+  font-size: 0.8rem; color: var(--muted);
+  padding: 6px 0 2px;
+}
+.iv-history-list { display: flex; flex-direction: column; gap: 12px; }
+.iv-history-item { display: flex; align-items: center; gap: 18px; cursor: pointer; }
+.iv-history-detail { background: transparent; }
+
+/* ---------- Interview: mood legend (start screen) ---------- */
+.mood-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 22px; justify-content: center; }
+
+/* ---------- Markdown rendering (chat bubbles, letters, reports) ---------- */
+.md { line-height: 1.55; font-size: 0.95rem; }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3, .md h4 {
+  font-family: var(--font-head);
+  margin: 0.7em 0 0.3em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.md h1 { font-size: 1.3rem; }
+.md h2 { font-size: 1.15rem; }
+.md h3 { font-size: 1.02rem; }
+.md h4 { font-size: 0.95rem; }
+.md p { margin: 0.35em 0; }
+.md strong { font-weight: 700; color: var(--fg); }
+.md em { color: var(--fg-soft); }
+.md ul, .md ol { margin: 0.35em 0; padding-left: 1.4em; }
+.md li { margin: 0.15em 0; }
+.md li::marker { color: var(--primary); font-weight: 700; }
+.md code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.84em;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.md pre {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.md pre code { background: none; border: none; padding: 0; font-size: 0.82rem; }
+.md blockquote {
+  border-left: 3px solid var(--primary);
+  padding: 2px 12px;
+  margin: 0.5em 0;
+  color: var(--muted);
+  font-style: italic;
+  background: var(--primary-soft);
+  border-radius: 0 8px 8px 0;
+}
+.md a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.md hr { border: none; border-top: 1px dashed var(--border-strong); margin: 0.6em 0; }
+.md table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.88rem; width: 100%; }
+.md th, .md td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; }
+.md th { background: var(--bg-soft); font-weight: 700; }
+
+/* Chat bubble markdown: tắt pre-wrap (newline trong HTML của marked sẽ thành dòng trống) */
+.chat-msg .chat-bubble.md-wrap { white-space: normal; padding: 10px 14px; }
+
+/* ---------- Image attach (chat) ---------- */
+.chat-inputbar .attach-btn { flex-shrink: 0; }
+.img-attachments { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 2px; }
+.img-attachments .att {
+  position: relative;
+  width: 64px; height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+}
+.img-attachments .att img { width: 100%; height: 100%; object-fit: cover; }
+.img-attachments .att .rm {
+  position: absolute; top: 2px; right: 2px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10px;
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.img-attachments .att.pending::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(99, 102, 241, 0.3);
+  animation: attPulse 1s ease-in-out infinite;
+}
+@keyframes attPulse { 50% { opacity: 0.5; } }
+/* Ảnh người dùng gửi trong bubble */
+.chat-msg .msg-images { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.chat-msg .msg-images img {
+  max-width: 180px; max-height: 130px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: zoom-in;
+}
+
+/* ---------- Export buttons ---------- */
+.export-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ============================================================
+   UI v17 — hiệu ứng động, mobile
+   (Lightbox CSS chuyển sang base.css — landing cũng dùng)
+   ============================================================ */
+
+/* Ảnh chat + showcase đều bấm được */
+.chat-msg .msg-images img { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.chat-msg .msg-images img:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0,0,0,0.2); }
+.show-shot { cursor: zoom-in; }
+
+/* ---------- Hero kết quả: viền gradient quay ---------- */
+.result-hero { position: relative; }
+.result-hero.grad-border::before { opacity: 0.4; }
+
+/* ---------- Wizard card: viền gradient + glow đón mắt ---------- */
+.wizard-card.grad-border::before { opacity: 0.35; }
+
+/* ---------- Điểm nhấn heading section: thanh accent nhỏ ---------- */
+.section-head h2 { position: relative; padding-bottom: 14px; }
+.section-head h2::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 52px; height: 3.5px;
+  border-radius: 999px;
+  background: var(--grad);
+}
+
+/* ---------- Mobile (<=700px): sắp xếp lại nơi chật ---------- */
+@media (max-width: 700px) {
+  /* Input chat: icon + input hàng trên, nút hành động hàng dưới */
+  .chat-inputbar { flex-wrap: wrap; }
+  .chat-inputbar .input { flex: 1 1 100%; order: 2; }
+  .chat-inputbar .attach-btn { order: 1; }
+  .chat-inputbar .btn { order: 3; flex: 1; }
+  .chat-inputbar .btn.btn-sm { flex: 0 0 auto; }
+  #chatArea .chat-inputbar .btn-primary { flex: 1; }
+
+  /* Hero stats: số to hơn, tách hàng rõ */
+  .hero-stats { gap: 22px; margin-top: 40px; }
+  .hero-stats .stat { min-width: 128px; }
+
+  /* Nút CTA hero full-width cho dễ bấm */
+  .hero-ctas .btn { flex: 1 1 100%; }
+
+  /* Dropzone chặt hơn */
+  .dropzone { padding: 30px 16px; }
+  .dropzone .dz-icon { width: 54px; height: 54px; }
+
+  /* Card padding gọn */
+  .result-hero { padding: 22px 18px; border-radius: 18px; }
+  .panel { padding: 20px 16px; }
+
+  /* Tabs: mục active luôn cuộn vào giữa (JS) */
+  .tabs { gap: 2px; padding: 4px; }
+  .tab { padding: 9px 14px; font-size: 0.88rem; }
+
+  /* Cover letter options xếp dọc */
+  .cl-options { flex-direction: column; align-items: stretch; }
+  .cl-options .field-label { margin-bottom: 6px; }
+
+  /* Nút hành động report full-width */
+  .report-actions .btn { flex: 1 1 100%; justify-content: center; }
+
+  /* Blunt box: % xuống dòng riêng */
+  .blunt-pass { margin-left: 0; }
+}
+
+/* Chat bubble ảnh: to hơn trên desktop để nhìn rõ CV */
+.chat-msg .msg-images img { max-width: 220px; max-height: 160px; }
+
+/* ---------- Dropzone icon bay lượn ---------- */
+.dropzone .dz-icon { animation: dzFloat 3.2s ease-in-out infinite; }
+@keyframes dzFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.dropzone.dragover { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18), 0 14px 36px rgba(99, 102, 241, 0.25); border-style: solid; }
+@media (prefers-reduced-motion: reduce) { .dropzone .dz-icon { animation: none; } }

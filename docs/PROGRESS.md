@@ -1,0 +1,99 @@
+# HireMind — Progress Log / Memory
+
+> File này ghi lại toàn bộ tiến độ, quyết định, và trạng thái dự án để các session sau (hoặc người mới) nắm được ngay hiện trạng. Cập nhật mỗi khi hoàn thành mốc lớn.
+
+## Trạng thái tổng quan
+- **Ngày bắt đầu:** 2026-09-24 (đêm, user đi ngủ — giao toàn quyền tự thực hiện)
+- **Mục tiêu:** Prototype thật (chạy end-to-end) + Slide proposal PDF 5–8 trang + bộ tài liệu đầy đủ, đồng bộ
+
+## Mục tiêu sản phẩm
+HireMind — nền tảng phân tích CV **đối chiếu với JD thật** (không chấm chung chung):
+1. Upload CV (PDF/DOCX/TXT/MD/ảnh, nhiều file/ảnh cho CV nhiều trang)
+2. Nhập link JD (vd: topcv.vn) — hệ thống tự fetch nội dung
+3. AI phân tích: điểm CV, điểm khớp JD (ATS), skill còn thiếu
+4. Chat với AI về CV/JD
+5. Mock interview (AI đóng vai interviewer, chấm từng câu, tổng kết cuối buổi)
+6. Cover letter generator
+7. Skill roadmap (lộ trình học để lấp gap)
+8. Mỗi lần upload = 1 session có link riêng mở lại được, không cần login
+
+## Kiểm chứng môi trường (đã test ✅)
+- ✅ AI endpoint: `http://localhost:20128/v1` hoạt động, key OK, model `main_model` (text → glm-5.3, vision → deepseek-v4.1-flash tự route)
+- ✅ Vision hoạt động: gửi data URL base64 PNG → AI đọc chữ chính xác
+- ✅ Node v24.18.0, npm 11.16.0
+- ✅ LibreOffice đã cài (dự phòng xuất PDF)
+- ✅ Chrome + Edge có trên máy
+- ⚠️ topcv.vn có Cloudflare: curl + jina.ai đều 403 → dùng Playwright headless Chromium để fetch JD (test pending)
+- ✅ npm deps cài xong: express, multer, mammoth, pdf-parse, playwright
+
+## Quyết định kiến trúc chính (chi tiết: DECISIONS.md)
+- Stack: Node + Express, frontend vanilla JS SPA (không build step), lưu file-based (không DB, không login — đúng track)
+- PDF xử lý client-side bằng pdf.js: vừa lấy text vừa render ảnh trang; nếu text nghèo → AI vision OCR
+- 1 session = 1 CV (nhiều file/ảnh ghép thành 1 CV); user có thể thoát sau khi upload xong, server tự xử lý tiếp
+- JD fetch: 3 tầng — plain fetch → r.jina.ai → Playwright Chromium; fallback luôn có ô paste text JD
+
+## Checklist tiến độ
+- [x] Đọc IDEA.md, test AI endpoint, test vision, test fetch JD
+- [x] Scaffold project + docs (PROGRESS/DECISIONS)
+- [x] Server: sessions, upload, AI pipeline, JD fetch, chat, interview, cover letter
+- [x] Frontend: landing + wizard upload + session page (tabs: Overview/Match/Roadmap/Chat/Interview/Cover letter/CV gốc) — light + dark mode
+- [x] Sample CV test + chạy end-to-end thật với AI (2 sessions ready với dữ liệu thật)
+- [x] Playwright chụp màn hình từng trang → tự review → sửa layout (vòng 1)
+- [x] Tài liệu: README, ARCHITECTURE, DECISIONS, PROGRESS
+- [x] Slide proposal PDF 5–8 trang (7 slides, HTML → PDF qua Playwright): docs/slides/HireMind-Proposal.pdf
+- [x] Test biên: file không phải CV → cảnh báo thân thiện (session e4b3733518ca)
+- [x] v2–v7: sticky tabs, persist chat/interview/cover-letter + pending state, chat ảnh, markdown + DOCX export, mood + lịch sử phỏng vấn, hire assessment, blunt verdict, processing UI mới
+- [x] **Slide v2 hoàn thành** (`docs/slides-v2/`): 8 slides 1280×720, style giống app (light pastel, indigo→violet gradient, Space Grotesk/DM Sans), animation HTML mượt (reveal on scroll stagger, shimmer title, deco drift, count-up số, browser-mockup floaty — có prefers-reduced-motion + print fallback), chèn 5 screenshot thật (assets/*.jpg resize 1400px JPEG), tên thật nhóm 4 người (Tạ Tuấn Tú nhóm trưởng, Nguyễn Mạnh Đạt, Đặng Văn Hải, Đinh Hoàng Thiện). Cấu trúc: 1 Title · 2 Bài toán · 3 Giải pháp · 4 Sản phẩm thật (dashboard) · 5 Điểm nhấn độc nhất (mood/hire%/blunt) · 6 Kiến trúc · 7 Tech stack + phân công · 8 Demo + impact. Xuất `HireMind-Proposal-v2.pdf` qua `render-slides.js` (vừa PDF vừa preview từng slide). Bản cũ `docs/slides/` GIỮ NGUYÊN.
+- [x] **v8 — Viết lại ngôn từ theo chuẩn pitching** (theo review chi tiết của user): toàn bộ 8 slides (`docs/slides-v2/proposal.html`) + landing page (`public/index.html`) — bỏ cụm dịch thô ("link phiên"→"liên kết phiên", "thoát trang tự do", "sửa mò", "đá xoáy", "đủ cửa vào nghề", "AI tâm sự", "không diễn"); slide 5 đổi tiêu đề "Mô phỏng chân thực tâm lý phỏng vấn — đưa ra sự thật thay vì lời làm hài lòng"; slide 6 "Kiến trúc xử lý bất đồng bộ"; slide 8 CTA "Chấm dứt kỷ nguyên nộp CV trong vô vọng"; fix lỗi thật landing: Cover Letter "xuất chụp PDF" → "xuất file Word (.docx)" (thực tế hệ thống chỉ xuất DOCX); hero "30s" → "~2 phút" (đúng với thời gian thực tế). Re-render PDF + verify server phục vụ bản mới.
+- [x] **v9 — Bắt buộc vị trí nhắm tới + Alternative Paths**: (1) "Vị trí bạn nhắm tới" là bắt buộc — wizard disable nút Tiếp tục khi trống (hint giải thích), backend processSession chặn song song (session error `missingRole: true`, không tốn token AI chấm mù — fix case user chỉ upload CV không điền gì vẫn được chấm "chung chung", mâu thuẫn với USP); (2) **Alternative Paths**: khi điểm thấp (<45) hoặc đậu <25% hoặc lệch hướng rõ ràng, AI đề xuất 2-3 vị trí khác CV có lợi thế hơn (role/fitScore/why/note) — hiển thị panel "Cần nhắc hướng đi khác phù hợp hơn" đầu tab Tổng quan; interview system prompt nhận biết qua cvContext ("HƯỚNG ĐI KHÁC AI ĐÃ ĐỀ XUẤT") + report thêm `alternativePathsNote` — phỏng vấn viên nói thẳng gợi ý hướng khác sau buổi; fix interview maxTokens 1200→4000 (JSON report bị cắt khi thêm field mới). Test thật: session `da30b96ac7c2` (CV tài chính vs Fullstack Developer) → điểm 24, đậu 3%, 3 gợi ý (môi giới CK 82%, tín dụng NH 75%, equity research 68%), report "CV hợp với ngành tài chính hơn hẳn…".
+- [x] **v10 — Fix mất hội thoại phỏng vấn + text wizard**: (1) **Bug thật của user** (session `ff41a010d2b4`): lượt cuối AI xuất INTERVIEW_END nhưng JSON report bị cắt → `report: null` dù `ended: true`; UI restore rơi nhánh không xử lý → màn hình Start, cả buổi trò chuyện biến mất ("đang trả lời xong đợi 1 lúc mất luôn hội thoại"). Fix 3 tầng: server retry 1 lượt lấy lại report khi parse fail; UI thêm hàm `renderEndedNoReport()` (cảnh báo + toàn bộ transcript + nút Luyện lại) cho cả entry restore và poll; wizard ô bỏ qua JD đổi text: "Bỏ qua cả hai cũng được — hệ thống sẽ đánh giá CV dựa trên thông tin bạn đã điền. Nên điền để có đánh giá tốt hơn." Verify: session lỗi cũ giờ hiển thị transcript đầy đủ.
+- [x] **v11 — Thiết kế lại báo cáo phỏng vấn** (feedback user): (1) ô gợi ý hướng đi khác bỏ nền vàng chói hardcode (không đọc được ở dark mode) → `iv-altpath-note` panel mềm: nền card, viền trái indigo, icon 🧭, đồng bộ light/dark qua tokens; (2) Điểm mạnh/Cần cải thiện/Chấm điểm từng phần bọc trong 3 block có viền màu top (xanh/đỏ/amber) + count badge, layout 2 cột, responsive 1 cột <760px; (3) 2 nút phân biệt rõ: "Luyện lại buổi mới" btn-primary (gradient, hành động chính) + "Xuất báo cáo Word" btn-ghost (phụ), cùng hàng có separator, icon SVG. Verify light + dark mode qua screenshot.
+- [x] **v12 — Landing + slides đồng bộ tính năng mới**: landing thêm section showcase "AI không nói cho bạn nghe điều bạn muốn nghe" (#honest) với 3 screenshot thật (shot-hire/shot-altpath/shot-blunt.jpg trong public/img, tag màu + hover lift); grid tính năng đổi thành 6 card mới (ATS, dự báo xác suất, lộ trình, gợi ý hướng đi khác, phỏng vấn 8 cảm xúc, Coach + thư ứng tuyển); step 1 đổi "Chọn đích & nạp CV" nói rõ bắt buộc điền đích. Slides: slide 4 thay 2 card (dự báo xác suất + gợi ý hướng đi), slide 5 card giữa đổi thành "🧭 Điểm thấp? AI chỉ đường khác" với screenshot altpath.jpg mới. KHÔNG thêm rule kỹ thuật vào slide/landing — chỉ tính năng hay ho, khác biệt.
+- [x] **v13 — Bảo mật cho deploy + CV nhập tay (form/tự viết)**: (A) **Bảo mật**: key AI rút khỏi `lib/ai.js` → `.env` (loader tự viết `dotenv.js`, không dependency; `.env.example` template; `.gitignore` chặn `.env` + `data/`); vá path traversal qua `X-Session-Id` (regex `^[a-f0-9]{12}$` ở cả upload middleware lẫn `sessionDir()`); SSRF guard `assertPublicUrl()` chặn localhost/IP nội bộ/metadata trong JD fetch (1 cổng cho cả 3 tầng); rate limit token-bucket tự viết (chat 60, interview 90, cover letter 30, analyze 25/phút — generous theo yêu cầu user, không chặn câu trả lời dài); security headers (CSP, X-Frame-Options DENY, nosniff, Referrer-Policy) đặt TRƯỚC express.static; `app.disable('x-powered-by')`; startup sweep đánh dấu session "processing" zombie thành error khi server restart. (B) **CV nhập tay**: wizard bước 1 thêm nút "Không có file CV? Điền form hoặc tự viết" → 2 tab: Form CV (họ tên*, liên hệ, học vấn*, kinh nghiệm, kỹ năng*, chứng chỉ, mục tiêu — ghép thành Markdown CV) + Tự viết (textarea ≥200 ký tự); gửi qua `clientPdfText` — pipeline không đổi; validate prompt làm rõ dữ liệu nhập tay lỏng lẻo vẫn là CV của 1 người. E2E test thật: form CV Marketing → session `61d739244d22` ready, AI trích đúng tên, 67/100, đậu 50%.
+- [x] **v14 — Chuẩn bị deploy cPanel**: file `hiremind-cpanel.zip` (22.1MB, 97 files, leak-check 0 — không có .env/data/node_modules); server.js đổi `app.listen(PORT)` dùng PORT từ env (Passenger cung cấp); **fix bug thật**: dùng `path` trước khi import (ReferenceError khi start) → về `__dirname`; playwright lazy-require trong lib/jd.js (shared host không có Chromium — app vẫn boot, tầng browser tự tắt, còn direct+jina; TopCV trên host cần dán JD thủ công); package.json thêm engines >=18; DEPLOY-CPANEL.md hướng dẫn từng bước trên giao diện cPanel (Setup Node.js App, env vars thay .env, Run NPM Install, AutoSSL). Cũ: `hiremind-deploy.zip` (bản không có sửa cPanel, có thể bỏ).
+- [ ] Tổng kiểm tra cuối, dọn dẹp
+
+## Ghi chú kỹ thuật cho session sau
+- Codebase đã index vào codebase-memory MCP với tên project **`hiremind`** — dùng search_graph/query_graph/get_architecture để探索 code không phải đọc file
+- Server đang chạy nền (PID trong netstat port 3000) — user test trực tiếp
+- Kích thước file lớn (session.js ~1200 dòng) — đọc theo offset/limit
+
+## Log chi tiết
+- **2026-09-24 01:20** — Khởi động. Đọc IDEA.md, kiểm chứng endpoint AI (text + vision OK), phát hiện topcv.vn chặn Cloudflare → phương án Playwright. Bắt đầu scaffold.
+- **2026-09-24 01:35** — Backend xong (lib/ai.js, lib/jd.js, lib/pipeline.js, lib/services.js, server.js). Fix bug: parse JSON kèm SSE tail `data: [DONE]` từ endpoint; import thiếu `writeSession`, `crypto`; scope `jdSource`.
+- **2026-09-24 02:00** — **END-TO-END ĐẠT**: session `0f720050425a` (CV ảnh OCR → JD TopCV fetch qua Chromium browser tier → phân tích, matchScore 4/100 hợp lý). Session `b5db57477100` (2 ảnh 2 CV khác nhau → AI hợp nhất + flag multiplePeople). Chat, Interview (hỏi theo CV, report chấm điểm), Cover Letter đều test OK với AI thật.
+- **2026-09-24 02:30** — Frontend xong: light mode mặc định (dịu, thân thiện theo yêu cầu user) + dark mode toggle nhớ localStorage; aurora background động; wizard 3 bước; session dashboard 7 tabs; animation (score ring count-up, reveal on scroll, typing dots); responsive; reduced-motion. Screenshot tự review vòng 1: fix route /s/:id thiếu, hero layout, header CSS dùng chung.
+- **2026-09-24 02:55** — Slide proposal 7 trang (HTML → PDF qua Playwright, có screenshot review từng slide). Test biên not-CV: AI nhận diện hóa đơn điện nước → thông báo "Tài liệu không phải là CV" thân thiện, kèm nút thử lại.
+- **2026-09-24 08:00 (v2)** — Feedback sáng của user, 5 cải tiến đã test thật:
+  1. **Tabs sticky** — cuộn dài vẫn luôn thấy header tabs (position: sticky + backdrop blur)
+  2. **Chat & Interview lưu phiên** — chatHistory + interviewMessages/interviewReport persist vào session.json; đổi tab/reload không mất; interview restore câu hỏi đang dở; có nút "Luyện lại"
+  3. **Chat gửi được ảnh** — attach tối đa 3 ảnh (JPG/PNG/WEBP), AI vision đọc + tư vấn theo ảnh (test: gửi CV người khác → AI nhận diện đúng "đây không phải CV của bạn")
+  4. **Markdown rendering** — marked.js: chat/interview/cover letter render đậm, nghiêng, bullet, heading, code, quote; sanitize HTML; hệ thống prompt yêu cầu AI trả Markdown
+  5. **Xuất DOCX** — lib/docx.js tự viết OOXML zip (không dependency): Markdown → Word có heading/bold/italic/bullet/numbered/quote/code/rule; endpoint /api/export/docx; nút export ở Chat, Interview report, Cover Letter; verify file hợp lệ bằng LibreOffice
+  + **Score ring → score pill**: vòng tròn bị tràn số → pill ngang có thanh tiến độ, đúng mọi kích thước
+- **2026-09-24 08:40 (v3)** — Feedback thứ 2 của user, 3 cải tiến đã test thật:
+  1. **Nút CTA từ câu hỏi khó → interview**: dưới "3 câu hỏi phỏng vấn khó nhất" có nút "Luyện trả lời các câu hỏi này với AI Interviewer" → tự chuyển tab Phỏng vấn + start ở **chế độ chuẩn bị**: interviewer chào thân thiện như người thật, nói đã nắm CV + JD, giải thích luồng, **chờ user nói "sẵn sàng" mới hỏi câu đầu** (test thật: chào đúng tên/vị trí/công ty Trinity, question đầu xoáy đúng điểm yếu CV)
+  2. **Markdown sát lại**: giảm spacing p/li/h/quote/pre ~40% (line-height 1.55, p 0.35em...) — text gọn như bình thường
+  3. **Hero tận dụng màn hình rộng**: container session 900→1160px, bỏ max-width 560px của summary — score pill trái, summary giữa rộng, ATS phải, hết khoảng trống 2 bên
+- **2026-09-24 09:30 (v4)** — Feedback thứ 3, sửa 2 bug thật + 1 tính năng:
+  1. **Pending state persist**: tin nhắn chat được lưu NGAY khi gửi (chatPending=true) thay vì sau khi AI trả lời → gửi xong rời tab, quay lại thấy typing indicator + tự poll đến khi reply về (test thật: ngắt client sau 3s → reply vẫn xử lý + lưu). Tương tự interviewPending → UI restore hiển thị "Interviewer đang soạn câu hỏi..." và poll.
+  2. **Bug khoảng cách markdown**: bubble dùng class `md-wrap` nhưng CSS chỉ target `.md` → `white-space: pre-wrap` còn hiệu lực, newline trong HTML của marked thành dòng trống → khoảng cách loạn. Fix: `.chat-bubble.md-wrap { white-space: normal; }`.
+  3. Restore chat bỏ qua cặp tin nhắn dở dang (user mà chưa có reply).
+- **2026-09-24 10:30 (v5)** — Ý tưởng mới của user, 3 tính năng lớn:
+  1. **Interviewer mood (trạng thái cảm xúc)**: 8 trạng thái dựa trên nghiên cứu stress interview thực tế (warm/neutral/skeptical/annoyed/silence/stress/impressed/ending). AI phát marker `===MOOD:xxx===` đầu mỗi lượt, UI hiển thị mood badge (màu theo mức độ + emoji + mẹo xử lý) ở topbar và từng câu của PV; mood nhất quán theo diễn biến (trả lời tốt → thoát annoyed). Test thật: neutral → skeptical sau câu trả lời tệ, giọng PV đổi theo.
+  2. **Lịch sử buổi phỏng vấn**: nút "Buổi mới" archive buổi hiện tại vào interviewHistory[] (kèm transcript + mood từng lượt + report), "Lịch sử" xem danh sách + chi tiết dạng chat bubbles.
+  3. **Sửa giật tab + transcript đồng bộ**: tab-pane không re-animate khi chuyển tab (nguyên nhân giật); phỏng vấn render transcript dạng bubbles giống Chat Coach (mdBubble/ivBubble) thay vì text trần; endpoint /interview/transcript rebuild kèm mood.
+- **2026-09-24 11:30 (v6)** — Feedback tiếp theo, 4 cải tiến:
+  1. **Cover Letter pending + cache**: thư lưu ngay khi tạo xong (coverLetter + meta), đang tạo thì coverLetterPending → rời tab quay lại vẫn thấy thư (hoặc typing + poll). Gọi lại cùng option → trả cache, không tốn AI call. Đây là phần cuối thiếu pending state (chat/interview đã fix từ v4).
+  2. **Processing UI mới (dùng chung wizard + session)**: component processing.js — orb animation 3 lớp (dash spin + pulse + float), **bộ đếm thời gian mm:ss**, chip "Bước x/4", progress bar có shine, 4 stage rõ ràng (dot pulse khi active, tick xanh khi done, connector line đổi màu), link "thoát an toàn". Fix nguyên nhân session page xấu: CSS cũ nằm trong landing.css mà session không load.
+  3. **Khả năng đậu phỏng vấn (hireAssessment)**: AI ước lượng passProbability 0-100% + verdict 5 mức + headline trực diện + reasons + whatWouldRaise. Hiển thị: pass gauge trong hero (❌ 5% "Gần như chắc chắn trượt · 95% sẽ trượt") + panel chi tiết đầu tab Tổng quan. Fallback từ overallScore cho session cũ. Test thật: session c64faa366ed0 → 5% very_unlikely với 5 lý do cụ thể.
+  4. **AI disclaimer**: ghi chú mờ, italic, nhỏ ("Đánh giá của AI — chỉ mang tính tham khảo...") dưới hero + trong hire panel — đúng yêu cầu "không quá nổi bật".
+- **2026-09-24 12:30 (v7)** — Feedback tiếp, 2 cải tiến:
+  1. **Bỏ dòng điểm trùng** trong báo cáo phỏng vấn (renderReportSummary vẽ score row 2 lần).
+  2. **"Phỏng vấn viên nói thật" (blunt box)**: prompt yêu cầu AI thêm bluntVerdict (3-5 câu nghĩ gì nói nấy, không làm đẹp) + interviewerFeeling (emoji + mood + attitude mô tả thái độ) + passProbability (khả năng đậu thật). UI: box gradient riêng với emoji lớn, "Cảm xúc: X — attitude", % đậu thật bên phải, quote text italic trong khung nét đứt, disclaimer nhỏ. Xuất Word kèm luôn phần này. Test thật: "😅 Muốn kết thúc sớm — Không rõ ứng viên ứng tuyển nhầm hay không nghiêm túc..." + bluntVerdict chi tiết thẳng thắn.
+- **User messages giữa chừng:** (1) đã cài LibreOffice (dùng verify DOCX); (2) mẫu CV ảnh ở `template/` (đã dùng test); (3) **nền sáng dịu, thân thiện, phải có light/dark mode, có động, ấn tượng** → light mặc định + dark toggle; (4) sáng: tabs sticky, lưu phiên chat/interview, chat thêm ảnh, markdown format + xuất DOCX, score ring bị tràn → đã làm hết cả 5; (5) nút luyện câu hỏi khó → interview prep mode, markdown sát lại, hero rộng; (6) pending state khi rời tab giữa chờ AI + khoảng cách markdown trong bubble → đã fix cả 2; (7) interviewer mood + lịch sử buổi PV + sửa giật/đồng bộ transcript → v5.
+
+## Phiên test đã tạo (link mẫu để demo lại)
+- `0f720050425a` — CV ảnh (Vũ Huy Tuấn - Tài chính) vs JD TopCV Tech Lead NodeJS → matchScore 4/100, roadmap 6 bước. **Session demo chính**, có lịch sử buổi phỏng vấn mẫu
+- `b5db57477100` — 2 ảnh 2 CV khác người → hợp nhất + multiplePeople flag
+- `e4b3733518ca` — file không phải CV → cảnh báo notCv ✓

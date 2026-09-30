@@ -1,0 +1,15 @@
+# Secrets — never commit
+.env
+
+# User data (CVs, session JSONs) — never commit
+data/
+
+# Dependencies
+node_modules/
+
+# Local test artifacts
+template/
+*.log
+
+# Temp working files
+tmp/

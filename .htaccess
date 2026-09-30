@@ -1,0 +1,9 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/uggiare1/hackathon.uggiare.vn"
+PassengerBaseURI "/"
+PassengerNodejs "/home/uggiare1/nodevenv/hackathon.uggiare.vn/24/bin/node"
+PassengerAppType node
+PassengerStartupFile server.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# AI_BASE_URL / AI_MODEL / AI_API_KEY được cấu hình ở cPanel "Setup Node.js App"
+# (Environment Variables) — KHÔNG ghi key vào file này.
