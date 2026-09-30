@@ -44,6 +44,27 @@
     }
   }
 
+  // CV thiết kế (.docx có banner màu + ô dán ảnh 3×4 + heading màu + skill 2 cột)
+  async function exportCvDocx(markdown, name) {
+    try {
+      const res = await fetch('/api/export/cv-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdown, name }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `CV-${(name || 'HireMind').replace(/\s+/g, '-')}.docx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Đã tải CV (.docx) — mở file, bấm vào ô bên phải để dán ảnh 3×4');
+    } catch {
+      toast('Không xuất được file CV Word');
+    }
+  }
+
   // ---------- Utils ----------
   function esc(s) {
     if (s == null) return '';
@@ -270,6 +291,7 @@
       if (id === 'interview') initInterview();
       if (id === 'cover') initCover();
       if (id === 'rewrite') initRewrite();
+      if (id === 'cv') initCv();
     }
     pane.classList.remove('hidden');
     if (id === 'overview') {
@@ -678,7 +700,7 @@
       $('#rwCopy').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(d.rewrittenCv || ''); toast('Đã copy CV mới'); } catch { toast('Không copy được'); }
       });
-      $('#rwDocx').addEventListener('click', () => exportDocx(`CV ${SESSION.cv?.candidateName || ''} — bản viết lại (HireMind)`, d.rewrittenCv || '', 'hiremind-cv-viet-lai.docx'));
+      $('#rwDocx').addEventListener('click', () => exportCvDocx(d.rewrittenCv || '', SESSION.cv?.candidateName || 'CV'));
       $('#rwGoRoadmap')?.addEventListener('click', () => document.querySelector('[data-tab="roadmap"]')?.click());
       $('#rwReupload').addEventListener('click', () => $('#rwFile').click());
       $('#rwFile').addEventListener('change', async () => {
@@ -1632,6 +1654,10 @@
         </div>
         ${cv.sections && cv.sections.length ? `<div class="skill-chips mb-4">${cv.sections.map(s => `<span class="skill-chip">${esc(s)}</span>`).join('')}</div>` : ''}
         <div class="cv-clean">${esc(cv.cleanedCv || 'Không có nội dung.')}</div>
+        <div class="rw-actions mt-4">
+          <button class="btn btn-soft btn-sm" id="cvDocx">⬇ Xuất CV thiết kế (.docx)</button>
+          <span class="small muted">File Word có banner màu, ô dán ảnh 3×4, heading màu — mở là chỉnh được ngay.</span>
+        </div>
       </div>
       <div class="panel">
         <div class="panel-title">
@@ -1641,6 +1667,11 @@
         ${(SESSION.files || []).map(f => `
           <div class="flag-item"><div class="flag-dot" style="background: var(--info);"></div><div>${esc(f.name)} <span class="muted small">(${(f.size / 1024).toFixed(0)} KB)</span></div></div>`).join('')}
       </div>`;
+  }
+
+  function initCv() {
+    const btn = $('#cvDocx');
+    if (btn) btn.addEventListener('click', () => exportCvDocx(SESSION.cv?.cleanedCv || '', SESSION.cv?.candidateName || 'CV'));
   }
 
   // Copy session link

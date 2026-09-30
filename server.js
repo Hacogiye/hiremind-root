@@ -287,6 +287,23 @@ app.post('/api/export/docx', (req, res) => {
   }
 });
 
+// Export CV thiết kế: banner màu + ô dán ảnh 3×4 + heading màu + ngày căn phải + skill 2 cột
+app.post('/api/export/cv-docx', (req, res) => {
+  try {
+    const { markdown, name } = req.body || {};
+    if (!markdown) return res.status(400).json({ error: 'Thiếu nội dung CV' });
+    const { buildCvDocx } = require('./lib/docx');
+    const buf = buildCvDocx(String(markdown).slice(0, 60000), { name: String(name || 'CV') });
+    const safeName = String(name || 'CV').replace(/[^\p{L}\w\- ]+/gu, '').trim().replace(/\s+/g, '-') || 'HireMind';
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="CV-${encodeURIComponent(safeName)}.docx"; filename*=UTF-8''CV-${encodeURIComponent(safeName + '.docx')}`);
+    res.send(buf);
+  } catch (e) {
+    console.error('[cv-docx]', e);
+    res.status(500).json({ error: 'Không tạo được file CV Word' });
+  }
+});
+
 // ---------- Mock Interview ----------
 // Interview transcript persists in session.json (interviewMessages + interviewReport).
 // In-memory map mirrors live state to avoid re-reading the file per turn.
