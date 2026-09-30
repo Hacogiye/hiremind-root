@@ -8,7 +8,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const { processSession, sessionDir, readSession, writeSession, patchSession, withSession, DATA_DIR } = require('./lib/pipeline');
-const { chatTurn, interviewSystem, parseInterviewTurn, generateCoverLetter } = require('./lib/services');
+const { chatTurn, interviewSystem, parseInterviewTurn, generateCoverLetter, rewriteCV } = require('./lib/services');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,7 +90,7 @@ app.use('/api/upload', (req, res, next) => {
 // ---------- Simple rate limiter (per-IP token bucket, no dependency) ----------
 // AI-backed endpoints are expensive; a generous cap keeps one visitor from draining the quota
 // while never getting in a real user's way (demo/test-friendly).
-const RATE_LIMITS = { chat: 60, interview: 90, coverLetter: 30, analyze: 25 };
+const RATE_LIMITS = { chat: 60, interview: 90, coverLetter: 30, analyze: 25, rewrite: 20 };
 const rateBuckets = new Map(); // key -> { tokens, last }
 setInterval(() => rateBuckets.clear(), 10 * 60 * 1000).unref();
 
@@ -173,6 +173,59 @@ app.get('/api/session/:id', (req, res) => {
   } catch {
     res.status(404).json({ error: 'Không tìm thấy phiên' });
   }
+});
+
+// ---------- Nạp CV mới để kiểm chứng (so sánh trước/sau) ----------
+// Tạo phiên MỚI kế thừa meta của phiên gốc (vị trí, JD...), user nạp CV đã chỉnh.
+// Phiên con mang parentSessionId — session page của nó vẽ panel so sánh điểm.
+app.post('/api/session/:id/reupload', (req, res, next) => {
+  if (!/^[a-f0-9]{12}$/.test(req.params.id)) {
+    return res.status(400).json({ error: 'Session id không hợp lệ' });
+  }
+  let parent;
+  try { parent = readSession(req.params.id); } catch {
+    return res.status(404).json({ error: 'Không tìm thấy phiên gốc' });
+  }
+  if (parent.status !== 'ready') return res.status(400).json({ error: 'Phiên gốc chưa sẵn sàng' });
+  const id = newSessionId();
+  fs.mkdirSync(sessionDir(id), { recursive: true });
+  const session = {
+    id,
+    status: 'uploading',
+    createdAt: new Date().toISOString(),
+    files: [],
+    meta: { ...parent.meta },
+    parentSessionId: req.params.id,
+  };
+  fs.writeFileSync(path.join(sessionDir(id), 'session.json'), JSON.stringify(session, null, 2));
+  req.sessionId = id;
+  next();
+}, upload.array('files', 12), (req, res) => {
+  const id = req.sessionId;
+  const files = (req.files || []).map(f => ({
+    stored: f.filename,
+    name: Buffer.from(f.originalname, 'latin1').toString('utf8'),
+    size: f.size,
+    type: f.mimetype,
+  }));
+  if (!files.length && !req.body.clientPdfText) {
+    return res.status(400).json({ error: 'Chưa chọn file CV nào' });
+  }
+  const session = readSession(id);
+  session.files.push(...files);
+  try {
+    if (req.body.meta) Object.assign(session.meta, JSON.parse(req.body.meta));
+  } catch { /* ignore bad meta */ }
+  if (req.body.clientPdfText) session.clientPdfText = req.body.clientPdfText;
+  if (req.body.clientPdfImages) {
+    try { session.clientPdfImages = JSON.parse(req.body.clientPdfImages); } catch { /* ignore */ }
+  }
+  session.status = 'processing';
+  session.stage = 'queued';
+  session.stageLabel = 'Đang chờ xử lý...';
+  writeSession(session);
+  setImmediate(() => processSession(id).catch(e => console.error(e)));
+  res.json({ id, url: `${req.protocol}://${req.get('host')}/s/${id}` });
 });
 
 function publicSession(s) {
@@ -489,6 +542,47 @@ app.post('/api/session/:id/cover-letter', rateLimit('coverLetter'), async (req, 
   } catch (e) {
     console.error('[cover-letter]', e);
     res.status(500).json({ error: e.friendly || 'Không tạo được cover letter. Thử lại.' });
+  }
+});
+
+// ---------- CV Rewrite & Reshape ----------
+// Viết lại CV theo vị trí mục tiêu từ phân tích đã có. Persisted như cover letter:
+// rewrite + rewriteMeta (cache key) lưu khi xong, rewritePending=true khi đang tạo —
+// user rời tab quay lại vẫn thấy. Cùng options → trả cache, không tốn AI call.
+app.post('/api/session/:id/rewrite', rateLimit('rewrite'), async (req, res) => {
+  try {
+    const s = readSession(req.params.id);
+    if (s.status !== 'ready') return res.status(400).json({ error: 'Phiên chưa sẵn sàng' });
+
+    if (s.rewrite && s.rewriteMeta === 'default') {
+      return res.json({ ...s.rewrite, cached: true });
+    }
+
+    await withSession(req.params.id, s2 => {
+      s2.rewritePending = true;
+      s2.rewriteMeta = 'default';
+    });
+
+    try {
+      const result = await rewriteCV(s);
+      if (!result || typeof result.rewrittenCv !== 'string' || !result.rewrittenCv.trim()) {
+        throw new Error('AI trả về CV viết lại không hợp lệ');
+      }
+      result.changes = Array.isArray(result.changes) ? result.changes.slice(0, 8) : [];
+      result.unfixableGaps = Array.isArray(result.unfixableGaps) ? result.unfixableGaps.slice(0, 4) : [];
+      await withSession(req.params.id, s2 => {
+        s2.rewrite = result;
+        s2.rewritePending = false;
+      });
+      res.json(result);
+    } catch (e) {
+      await withSession(req.params.id, s2 => { s2.rewritePending = false; }).catch(() => {});
+      throw e;
+    }
+  } catch (e) {
+    console.error('[rewrite]', e);
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    res.status(500).json({ error: e.friendly || 'Không viết lại được CV. Thử lại sau ít phút.' });
   }
 });
 
