@@ -7,7 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const { processSession, sessionDir, readSession, writeSession, patchSession, DATA_DIR } = require('./lib/pipeline');
+const { processSession, sessionDir, readSession, writeSession, patchSession, withSession, DATA_DIR } = require('./lib/pipeline');
 const { chatTurn, interviewSystem, parseInterviewTurn, generateCoverLetter } = require('./lib/services');
 
 const app = express();
@@ -190,30 +190,31 @@ app.post('/api/session/:id/chat', rateLimit('chat'), async (req, res) => {
     if (s.status !== 'ready') return res.status(400).json({ error: 'Phiên chưa sẵn sàng' });
     const { message, images } = req.body;
     if (!message && !(images && images.length)) return res.status(400).json({ error: 'Thiếu tin nhắn' });
-    const history = Array.isArray(s.chatHistory) ? s.chatHistory.slice(-12) : [];
     const imgs = (Array.isArray(images) ? images : []).slice(0, 3)
       .filter(im => im && im.base64 && im.base64.length < 4 * 1024 * 1024)
       .map(im => ({ base64: String(im.base64), mime: String(im.mime || 'image/png') }));
 
-    // Persist user turn + pending flag BEFORE the slow AI call
-    s.chatHistory = [...history, { role: 'user', content: String(message || '[ảnh]') }];
-    s.chatPending = true;
-    writeSession(s);
-
+    // Persist user turn + pending flag BEFORE the slow AI call (qua hàng đợi ghi)
+    const { history } = await withSession(req.params.id, s => {
+      const hist = Array.isArray(s.chatHistory) ? s.chatHistory.slice(-12) : [];
+      s.chatHistory = [...hist, { role: 'user', content: String(message || '[ảnh]') }];
+      s.chatPending = true;
+      return { history: hist };
+    });
     const reply = await chatTurn(s, String(message || '').slice(0, 4000), history, imgs);
-    s.chatHistory.push({ role: 'assistant', content: reply });
-    s.chatPending = false;
-    writeSession(s);
-    res.json({ reply, history: s.chatHistory });
+    await withSession(req.params.id, s2 => {
+      s2.chatHistory = [...(s2.chatHistory || []), { role: 'assistant', content: reply }];
+      s2.chatPending = false;
+    });
+    const final = readSession(req.params.id);
+    res.json({ reply, history: final.chatHistory });
   } catch (e) {
     console.error('[chat]', e);
     // Clear pending so the UI doesn't hang on a dead typing indicator
     try {
-      const s = readSession(req.params.id);
-      s.chatPending = false;
-      writeSession(s);
+      await withSession(req.params.id, s => { s.chatPending = false; });
     } catch { /* ignore */ }
-    res.status(500).json({ error: 'AI không phản hồi được. Thử lại sau ít phút.' });
+    res.status(500).json({ error: e.friendly || 'AI không phản hồi được. Thử lại sau ít phút.' });
   }
 });
 
@@ -246,7 +247,7 @@ function ivState(id) {
   return interviews.get(id);
 }
 
-app.post('/api/session/:id/interview/start', rateLimit('interview'), (req, res) => {
+app.post('/api/session/:id/interview/start', rateLimit('interview'), async (req, res) => {
   const s = readSession(req.params.id);
   if (s.status !== 'ready') return res.status(400).json({ error: 'Phiên chưa sẵn sàng' });
   const { prep } = req.body || {};
@@ -257,13 +258,14 @@ app.post('/api/session/:id/interview/start', rateLimit('interview'), (req, res) 
     ? '(Ứng viên vừa bấm nút luyện các câu hỏi khó từ báo cáo. Hãy mở đầu theo chế độ chuẩn bị: chào, giới thiệu, giải thích luồng, rồi chờ họ nói "sẵn sàng".)'
     : '(Bắt đầu buổi phỏng vấn. Hãy chào ứng viên ngắn gọn và hỏi câu hỏi đầu tiên.)' });
   interviews.set(req.params.id, { messages });
-  s.interviewMessages = messages;
-  s.interviewReport = null;
-  writeSession(s);
+  await withSession(req.params.id, s => {
+    s.interviewMessages = messages;
+    s.interviewReport = null;
+  });
   chatWithInterview(req.params.id, res);
 });
 
-app.post('/api/session/:id/interview/reply', rateLimit('interview'), (req, res) => {
+app.post('/api/session/:id/interview/reply', rateLimit('interview'), async (req, res) => {
   const { message } = req.body;
   if (!interviews.has(req.params.id)) {
     // Page reloaded mid-interview — rebuild from persisted transcript
@@ -274,9 +276,7 @@ app.post('/api/session/:id/interview/reply', rateLimit('interview'), (req, res) 
   const st = interviews.get(req.params.id);
   if (st.ended) return res.status(400).json({ error: 'Buổi phỏng vấn đã kết thúc. Bấm "Luyện lại" để bắt đầu buổi mới.' });
   st.messages.push({ role: 'user', content: String(message).slice(0, 4000) });
-  const s = readSession(req.params.id);
-  s.interviewMessages = st.messages;
-  writeSession(s);
+  await withSession(req.params.id, s => { s.interviewMessages = st.messages; });
   chatWithInterview(req.params.id, res);
 });
 
@@ -341,40 +341,41 @@ app.get('/api/session/:id/interview/transcript', (req, res) => {
 });
 
 // "Buổi mới": lưu buổi hiện tại vào interviewHistory[] rồi reset state.
-app.post('/api/session/:id/interview/archive', (req, res) => {
+app.post('/api/session/:id/interview/archive', rateLimit('interview'), async (req, res) => {
   try {
-    const s = readSession(req.params.id);
-    s.interviewHistory = Array.isArray(s.interviewHistory) ? s.interviewHistory : [];
-    // Archive buổi hiện tại (nếu có nội dung)
-    if (Array.isArray(s.interviewMessages) && s.interviewMessages.length > 1) {
-      const { parseInterviewTurn } = require('./lib/services');
-      const transcript = [];
-      for (const m of s.interviewMessages) {
-        if (m.role === 'system') continue;
-        if (m.role === 'user') {
-          const content = String(m.content).replace(/^\(.*?\)\s*/, '');
-          if (content && !content.startsWith('(')) transcript.push({ role: 'user', content });
-        } else {
-          const { question, mood } = parseInterviewTurn(m.content);
-          if (question) transcript.push({ role: 'interviewer', content: question, mood: mood || null });
+    const { historyCount } = await withSession(req.params.id, s => {
+      s.interviewHistory = Array.isArray(s.interviewHistory) ? s.interviewHistory : [];
+      // Archive buổi hiện tại (nếu có nội dung)
+      if (Array.isArray(s.interviewMessages) && s.interviewMessages.length > 1) {
+        const { parseInterviewTurn } = require('./lib/services');
+        const transcript = [];
+        for (const m of s.interviewMessages) {
+          if (m.role === 'system') continue;
+          if (m.role === 'user') {
+            const content = String(m.content).replace(/^\(.*?\)\s*/, '');
+            if (content && !content.startsWith('(')) transcript.push({ role: 'user', content });
+          } else {
+            const { question, mood } = parseInterviewTurn(m.content);
+            if (question) transcript.push({ role: 'interviewer', content: question, mood: mood || null });
+          }
+        }
+        if (transcript.length) {
+          s.interviewHistory.unshift({
+            endedAt: new Date().toISOString(),
+            report: s.interviewReport || null,
+            mood: s.interviewMood || null,
+            transcript,
+          });
         }
       }
-      if (transcript.length) {
-        s.interviewHistory.unshift({
-          endedAt: new Date().toISOString(),
-          report: s.interviewReport || null,
-          mood: s.interviewMood || null,
-          transcript,
-        });
-      }
-    }
-    s.interviewMessages = null;
-    s.interviewReport = null;
-    s.interviewPending = false;
-    s.interviewMood = null;
-    writeSession(s);
+      s.interviewMessages = null;
+      s.interviewReport = null;
+      s.interviewPending = false;
+      s.interviewMood = null;
+      return { historyCount: s.interviewHistory.length };
+    });
     interviews.delete(req.params.id);
-    res.json({ ok: true, historyCount: s.interviewHistory.length });
+    res.json({ ok: true, historyCount });
   } catch (e) {
     console.error('[interview-archive]', e);
     res.status(500).json({ error: 'Không lưu được buổi phỏng vấn' });
@@ -414,11 +415,7 @@ async function chatWithInterview(id, res) {
   const st = interviews.get(id);
   try {
     // Mark pending so a reload during the AI call knows a question is coming
-    try {
-      const s0 = readSession(id);
-      s0.interviewPending = true;
-      writeSession(s0);
-    } catch { /* ignore */ }
+    await withSession(id, s0 => { s0.interviewPending = true; }).catch(() => {});
     const { chat } = require('./lib/ai');
     const raw = await chat(st.messages, { maxTokens: 4000, temperature: 0.6 });
     let { question, ended, report, mood } = parseInterviewTurn(raw);
@@ -435,32 +432,26 @@ async function chatWithInterview(id, res) {
     if (ended) {
       st.ended = true;
       st.report = report;
-      try {
-        const s = readSession(id);
+      await withSession(id, s => {
         s.interviewMessages = st.messages;
         s.interviewReport = report || null;
         s.interviewPending = false;
         if (mood) s.interviewMood = mood;
-        writeSession(s);
-      } catch { /* session dir missing */ }
+      }).catch(() => { /* session dir missing */ });
     } else {
-      try {
-        const s = readSession(id);
+      await withSession(id, s => {
         s.interviewMessages = st.messages;
         s.interviewPending = false;
         if (mood) s.interviewMood = mood;
-        writeSession(s);
-      } catch { /* ignore */ }
+      }).catch(() => { /* ignore */ });
     }
     res.json({ question, ended, report, mood: st.mood || mood || null });
   } catch (e) {
     console.error('[interview]', e);
     try {
-      const s0 = readSession(id);
-      s0.interviewPending = false;
-      writeSession(s0);
+      await withSession(id, s0 => { s0.interviewPending = false; });
     } catch { /* ignore */ }
-    res.status(500).json({ error: 'AI không phản hồi được. Thử lại.' });
+    res.status(500).json({ error: e.friendly || 'AI không phản hồi được. Thử lại.' });
   }
 }
 
@@ -479,24 +470,25 @@ app.post('/api/session/:id/cover-letter', rateLimit('coverLetter'), async (req, 
       return res.json({ ...s.coverLetter, cached: true });
     }
 
-    s.coverLetterPending = true;
-    s.coverLetterMeta = optsKey;
-    writeSession(s);
+    await withSession(req.params.id, s2 => {
+      s2.coverLetterPending = true;
+      s2.coverLetterMeta = optsKey;
+    });
 
     try {
       const result = await generateCoverLetter(s, { tone, language, extraNote });
-      s.coverLetter = result;
-      s.coverLetterPending = false;
-      writeSession(s);
+      await withSession(req.params.id, s2 => {
+        s2.coverLetter = result;
+        s2.coverLetterPending = false;
+      });
       res.json(result);
     } catch (e) {
-      s.coverLetterPending = false;
-      writeSession(s);
+      await withSession(req.params.id, s2 => { s2.coverLetterPending = false; });
       throw e;
     }
   } catch (e) {
     console.error('[cover-letter]', e);
-    res.status(500).json({ error: 'Không tạo được cover letter. Thử lại.' });
+    res.status(500).json({ error: e.friendly || 'Không tạo được cover letter. Thử lại.' });
   }
 });
 
