@@ -15,7 +15,7 @@
 | Loại | Hackathon 2026 — Track: AI application |
 | Nhóm | Tạ Tuấn Tú (nhóm trưởng), Nguyễn Mạnh Đạt, Đặng Văn Hải, Đinh Hoàng Thiện |
 | Stack | Node.js ≥18 + Express 4, Vanilla JS SPA (không build step), storage file JSON (không DB, không login), AI OpenAI-compatible |
-| Bản hiện tại | **v14** — đang chạy ổn trên host |
+| Bản hiện tại | **v15** — v14 + CV Rewrite & Reshape + vòng kiểm chứng (2026-09-30). Git repo local (branch `main`, baseline `a218dee`, v15 = 6 commit granular). **Chưa push lên GitHub** — chủ ý: quy định ngày thi yêu cầu logic nghiệp vụ commit GitHub trong giờ thi, push bản đầy đủ trước đó sẽ vi phạm |
 | Host | cPanel LiteSpeed/Passenger, `hackathon.uggiare.vn`, user `uggiare1`, app root `/home/uggiare1/hackathon.uggiare.vn` |
 | Deploy | cPanel "Setup Node.js App" — **API key / base URL / model điền ở Environment Variables của app trên host** (user xác nhận 2026-09-30: bản này chạy OK) |
 | AI provider | OpenAI-compatible endpoint; model id do env `AI_MODEL` quyết định (thời điểm test: text → glm-5.3, vision → deepseek-v4.1-flash tự route phía endpoint) |
@@ -39,8 +39,8 @@
 1. **Bản host đang chạy ổn** — coi source này là baseline, không sửa tùy tiện. Config AI nằm ở cPanel app env, KHÔNG ở file.
 2. **`.htaccess` — ĐÃ XỬ LÝ (2026-09-30)**: block `SetEnv` chứa key cũ + tunnel URL đã xóa theo yêu cầu user; giữ lại block Passenger của CloudLinux (host cần để chạy app, không chứa bí mật), kèm chú thích config AI nằm ở cPanel app env. Key cũ từng lộ trong file — **nên rotate nếu còn hiệu lực** (chưa làm).
 3. **`session.js` ở thư mục GỐC là bản CŨ của `public/js/session.js`** (1373 vs 1457 dòng, không ai tham chiếu) — rác, xóa được. Chưa xóa.
-4. **Không có `.env` local** — chạy local: copy `.env.example` → `.env`, điền 3 giá trị cùng host.
-5. **Thư mục `scripts/` (Playwright screenshot/test helpers mà README nhắc) KHÔNG có trong bản source này** — bị mất khi lấy source từ host. devDep playwright vẫn còn trong package.json.
+4. **`.env` local đã có + đã chuẩn (2026-09-30)**: `AI_MODEL=main` (text) + `AI_VISION_MODEL=main_model` (vision). ⚠️ **Phát hiện quan trọng**: alias `main` của provider route text OK nhưng vision LÚC CÓ LÚC KHÔNG (glm-5.3-flash không có vision → OCR báo "[NOT_DOCUMENT]"); alias `main_model` vision chuẩn (deepseek-v4.1-flash) nhưng TEXT bị 404 *"No active credentials for provider: openai"* (lỗi phía provider). Nên code tách 2 biến. ⚠️ **CẦN KIỂM TRA HOST**: nếu cPanel env trên host cũng dùng alias không có vision → upload CV ảnh sẽ hỏng trên host; thêm `AI_VISION_MODEL` vào cPanel env (lib/ai.js mới đọc biến này, fallback về AI_MODEL nếu trống). `.env.example` từng bị xóa khi user tạo `.env` — đã tạo lại có thêm AI_VISION_MODEL.
+5. **Thư mục `scripts/` — ĐÃ TÁI TẠO (2026-09-30)**: `shot.js` (Playwright tự chụp light/dark/mobile, chờ selector phù hợp cả 2 trạng thái rewrite) + `e2e-v15.js` (E2E 7 bước). Lưu ý: chạy script cần `npm install` (playwright là devDep; Chromium đã tải ở cache user-level).
 6. `stderr.log` là log host cũ (lỗi MODULE_NOT_FOUND, AI 530 tunnel chết, 402 hết tiền) — chỉ mang tính lịch sử, các lỗi đó đã xử lý từ phía host.
 7. `data/` chứa 5 session test thật (4 ready, 1 error) — CV test "Nguyễn Mai Loan". Gitignore đã chặn `data/` + `.env`.
 8. Thư mục chính **chưa phải git repo** (chưa từng init). Template ngày thi thì đã init.
@@ -70,13 +70,15 @@ kế hoạch nhóm = **8 tiếng xây dựng + 1 tiếng cuối bàn luận vớ
 **Feedback giám khảo vòng chung kết (2026-09-30)**: sản phẩm dừng ở chẩn đoán (lỗi + skill gap), thiếu bước "hành động trực tiếp trên CV" — cần tích hợp **CV Rewrite & Reshape** (tự động gợi ý cấu trúc, sửa format, viết lại CV theo từng JD mục tiêu). Pitching phải nhấn: AI là "trợ lý trực tiếp sửa CV", không chỉ "người chấm/phỏng vấn giả lập". *(Đánh giá của AI: feedback hợp lý, khả thi cao vì mọi nguyên liệu đã có trong session — xem nhật ký.)*
 
 Thứ tự đề xuất mới (đề xuất 2026-09-30, chờ user chốt):
-1. **Hàng đợi ghi session.json theo phiên** (atomic writes) — chống mất dữ liệu khi pipeline/chat/interview ghi chồng nhau.
-2. **Map lỗi AI → thông báo thân thiện** + không retry khi 402/hết tiền.
-3. **CV Rewrite & Reshape** (theo chỉ đạo giám khảo): endpoint `POST /api/session/:id/rewrite` tái dùng cleanedCv + JD structure + match.missing + weaknesses.fix; output JSON: CV viết lại (Markdown) + danh sách thay đổi có lý do (reorder/rephrase/emphasize/format) + **"gap không thể sửa bằng viết lại"** (trỏ sang roadmap — không bịa); quy tắc cứng KHÔNG bịa thông tin; cache theo option như cover letter; pending state; xuất DOCX ngay (tái dùng lib/docx.js); rate limit thêm `rewrite`.
-4. **Nạp CV mới → so sánh trước/sau** — khép vòng với (3): viết lại → xuất → nạp lại kiểm chứng → điểm tăng.
+1. ~~Hàng đợi ghi session.json~~ — **XONG v15** (`withSession`).
+2. ~~Map lỗi AI thân thiện + ngừng retry 402~~ — **XONG v15** (`aiHttpError` + `noRetry`).
+3. ~~CV Rewrite & Reshape~~ — **XONG v15**: `rewriteCV()` + `POST /rewrite` + tab "CV viết lại" + hậu xử lý phục hồi liên hệ thật.
+4. ~~Nạp CV mới → so sánh trước/sau~~ — **XONG v15**: `POST /reupload` + panel so sánh delta.
 5. Xuất báo cáo PDF (print CSS) — rẻ.
 6. TTL tự dọn session cũ + nút "Xóa phiên".
 7. So sánh 1 CV với nhiều JD — để sau.
+
+Ghi chú v15: chênh lệch điểm giữa 2 lần chấm cùng CV có thể lớn (67 vs 20 trong test) — đã giảm temperature 0.3→0.15 và có disclaimer trong panel so sánh; nếu cần hơn nữa có thể chấm 2 lần lấy trung bình (tốn token).
 
 Hệ quả với EXAM-PLAN (nếu chốt): CV Rewrite thành tính năng ưu tiên cao nhất sau Dashboard — xếp ngay sau mốc Dashboard, TRƯỚC Chat/Interview; thứ tự cắt giảm đổi thành: Cover Letter → Interview → DOCX→ (giữ Rewrite vì là điểm nhấn giám khảo chỉ đạo).
 
@@ -92,6 +94,7 @@ Hệ quả với EXAM-PLAN (nếu chốt): CV Rewrite thành tính năng ưu ti�
 | 2026-09-30 | Xóa block `SetEnv` chứa key cũ khỏi `.htaccess` (giữ block Passenger); cập nhật EXAM-PLAN theo thời lượng thực tế 9h = 8h xây + 1h bàn luận |
 | 2026-09-30 | Thêm "Quy tắc commit liên tục" vào EXAM-PLAN (giám khảo đọc timeline, tránh nghi copy) — push `62e7181` |
 | 2026-09-30 | User set `.env` local (đã verify: endpoint AI 200 OK, model `main` → glm-5.3-flash). Nhận feedback giám khảo chung kết → hướng **CV Rewrite & Reshape**; đề xuất lại thứ tự cải tiến (chờ chốt) |
+| 2026-09-30 | **v15 hoàn thành + tự test + tự đánh giá UI**: git init baseline `a218dee` → 6 commit granular; F1 hàng đợi ghi (unit test 10 mutation song song OK); F2 lỗi thân thiện + noRetry; F3 rewrite backend+frontend; F4 reupload + panel so sánh; E2E 7 bước pass với AI thật. Bug bắt được khi tự test: (a) alias model không có vision → tách `AI_VISION_MODEL`; (b) OCR trả hội thoại → kiểm tra định dạng + retry; (c) model che email/SĐT thành placeholder → hậu xử lý phục hồi từ cleanedCv; (d) panel so sánh đọc nhầm `meta.parentSessionId` → sửa; (e) server cũ kẹt cổng 3111 → taskkill. 12 screenshot `docs/screenshots/v15-*` (light/dark/mobile, panel so sánh OK). Server test đang chạy local port 3111, 2 session demo: `f603f88665dd` (có JD + rewrite), `7380a1334a51` (phiên kiểm chứng) |
 
 *(Lịch sử v1→v14 xem `docs/PROGRESS.md` — giữ nguyên, không lặp lại ở đây.)*
 
