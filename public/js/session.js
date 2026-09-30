@@ -166,6 +166,7 @@
       ['overview', 'Tổng quan', true],
       ['match', 'Đối chiếu JD', !!jd],
       ['roadmap', 'Lộ trình', !!(r.roadmap && r.roadmap.length)],
+      ['rewrite', 'CV viết lại', true],
       ['chat', 'Chat Coach', true],
       ['interview', 'Phỏng vấn giả lập', true],
       ['cover', 'Cover Letter', true],
@@ -253,6 +254,7 @@
         overview: renderOverview,
         match: renderMatch,
         roadmap: renderRoadmap,
+        rewrite: renderRewrite,
         chat: renderChat,
         interview: renderInterview,
         cover: renderCover,
@@ -267,6 +269,7 @@
       if (id === 'chat') initChat();
       if (id === 'interview') initInterview();
       if (id === 'cover') initCover();
+      if (id === 'rewrite') initRewrite();
     }
     pane.classList.remove('hidden');
     if (id === 'overview') {
@@ -316,7 +319,11 @@
     const bdRows = [
       ['content', 'Nội dung'], ['format', 'Trình bày'], ['relevance', 'Liên quan vị trí'], ['impact', 'Tác động'],
     ];
+    // Phiên kiểm chứng (nạp lại CV đã chỉnh) — panel so sánh điểm với phiên gốc
+    const cmpMount = SESSION.meta?.parentSessionId ? '<div class="mb-6" id="cmpMount"></div>' : '';
+    if (SESSION.meta?.parentSessionId) loadCompare();
     return `
+      ${cmpMount}
       ${(ha.headline || (ha.reasons && ha.reasons.length)) ? `
       <div class="panel mb-6 hire-panel">
         <div class="hire-head">
@@ -550,6 +557,192 @@
             </div>`).join('')}
         </div>
       </div>`;
+  }
+
+  // ----- So sánh trước/sau (phiên kiểm chứng nạp CV đã chỉnh) -----
+  async function loadCompare() {
+    try {
+      const res = await fetch(`/api/session/${SESSION.meta.parentSessionId}`);
+      if (!res.ok) return;
+      const p = await res.json();
+      const mount = document.getElementById('cmpMount');
+      if (!mount) return;
+      const pr = p.result || {}, nr = SESSION.result || {};
+      const passFallback = s => Math.max(2, Math.min(95, Math.round((s.overallScore || 0) * 0.9)));
+      const ph = pr.hireAssessment?.passProbability ?? passFallback(pr);
+      const nh = nr.hireAssessment?.passProbability ?? passFallback(nr);
+      const rows = [['Điểm CV', pr.overallScore, nr.overallScore, '/100']];
+      if (pr.match && nr.match) rows.push(['Điểm khớp ATS', pr.match.matchScore, nr.match.matchScore, '/100']);
+      rows.push(['Khả năng đậu', ph, nh, '%']);
+      mount.innerHTML = `
+        <div class="panel cmp-panel">
+          <div class="panel-title">
+            <span class="pt-icon green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            Kiểm chứng lại sau khi chỉnh CV
+            ${p.cv?.candidateName ? `<span class="count">so với phiên gốc</span>` : ''}
+          </div>
+          <div class="cmp-rows">
+            ${rows.map(([label, oldV, newV, unit]) => {
+              const d = (newV ?? 0) - (oldV ?? 0);
+              const cls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+              const arrow = d > 0 ? '↑' : d < 0 ? '↓' : '→';
+              const sign = d > 0 ? '+' : '';
+              return `<div class="cmp-row">
+                <div class="cmp-lbl">${label}</div>
+                <div class="cmp-vals">
+                  <span class="cmp-old">${oldV ?? '—'}${unit}</span>
+                  <span class="cmp-arrow">→</span>
+                  <span class="cmp-new">${newV ?? '—'}${unit}</span>
+                  <span class="cmp-delta cmp-${cls}">${arrow} ${sign}${d}</span>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="cmp-foot">
+            <a class="btn btn-ghost btn-sm" href="/s/${SESSION.meta.parentSessionId}">Xem phiên gốc</a>
+            <span class="small muted">AI chấm lại trên cùng vị trí &amp; JD — điểm chênh lệch chỉ mang tính tham khảo.</span>
+          </div>
+        </div>`;
+    } catch { /* phiên gốc không đọc được — bỏ qua panel */ }
+  }
+
+  // ----- CV Rewrite & Reshape -----
+  const RW_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3z"/></svg>';
+
+  function renderRewrite() {
+    const hasJd = !!SESSION.jd;
+    return `
+      <div class="panel">
+        <div class="panel-title">
+          <span class="pt-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3z"/></svg></span>
+          CV viết lại — "may đo" theo vị trí nhắm tới
+          <span class="count">không bịa thông tin</span>
+        </div>
+        <p class="muted" style="margin-bottom: 14px;">AI viết lại CV của bạn dựa trên toàn bộ phân tích${hasJd ? ` và tin tuyển dụng <strong>${esc(SESSION.jd.title || '')}</strong>` : ''}: sắp xếp lại thứ tự, diễn lại câu yếu, nhấn mạnh điểm khớp. AI <strong>không bịa thêm gì</strong> — những gì thiếu thật sự sẽ nằm ở phần "không sửa được bằng viết lại".</p>
+        ${!hasJd ? '<div class="leave-note mb-4">Phiên này không có JD — CV sẽ được tối ưu theo vị trí bạn đã điền. Tạo phiên mới kèm link/dán JD để được "may đo" sát hơn.</div>' : ''}
+        <div class="rw-actions-bar">
+          <button class="btn btn-primary" id="rwGen">${RW_ICON} ${SESSION.rewrite ? 'Viết lại từ đầu' : 'Viết lại CV theo JD này'}</button>
+          <span class="small muted">Tốn 1 lượt AI (~1 phút) · kết quả lưu tự động</span>
+        </div>
+        <div id="rwResult"></div>
+      </div>`;
+  }
+
+  function initRewrite() {
+    const btn = $('#rwGen'), out = $('#rwResult');
+    let pollTimer = null;
+
+    const pendingHtml = () => `<div class="text-center muted" style="padding: 36px 0;"><span class="typing-dots"><span></span><span></span><span></span></span><div class="mt-3">AI đang viết lại CV... (bạn có thể rời đi — quay lại sẽ thấy kết quả)</div></div>`;
+
+    function renderResult(d) {
+      const TYPE = {
+        reorder: ['badge-indigo', 'Sắp xếp lại'],
+        rephrase: ['badge-sky', 'Diễn lại'],
+        emphasize: ['badge-green', 'Nhấn mạnh'],
+        format: ['badge-amber', 'Định dạng'],
+      };
+      out.innerHTML = `
+        ${d.note ? `<div class="rw-note">${esc(d.note)}</div>` : ''}
+        <div class="rw-section-label">① Bản CV đã viết lại</div>
+        <div class="rw-cv md-wrap">${md(d.rewrittenCv || '(trống)')}</div>
+        <div class="rw-section-label mt-6">② Thay đổi đáng chú ý <span class="count">${(d.changes || []).length}</span></div>
+        <div class="rw-changes">
+          ${(d.changes || []).map(c => {
+            const tm = TYPE[c.type] || ['badge-indigo', 'Chỉnh'];
+            return `<div class="chg-item">
+              <div class="chg-head"><span class="badge ${tm[0]}">${tm[1]}</span><strong>${esc(c.where || '')}</strong></div>
+              ${(c.before || c.after) ? `<div class="chg-ba"><span class="chg-before">${esc(c.before || '')}</span><span class="chg-arrow">→</span><span class="chg-after">${esc(c.after || '')}</span></div>` : ''}
+              ${c.why ? `<div class="chg-why">${esc(c.why)}</div>` : ''}
+            </div>`;
+          }).join('') || '<p class="muted">Không có danh sách thay đổi.</p>'}
+        </div>
+        ${(d.unfixableGaps || []).length ? `
+        <div class="rw-section-label mt-6">③ Không sửa được bằng viết lại — phải học thêm</div>
+        <div class="panel mt-2" style="background: var(--warn-soft); border-color: rgba(217,119,6,0.2); padding: 14px 16px;">
+          ${d.unfixableGaps.map(g => `<div class="flag-item"><div class="flag-dot" style="background: var(--warn);"></div><div><strong>${esc(g.skill || '')}</strong>${g.why ? ` — ${esc(g.why)}` : ''}</div></div>`).join('')}
+          <button class="btn btn-soft btn-sm mt-2" id="rwGoRoadmap">Xem lộ trình lấp khoảng trống</button>
+        </div>` : ''}
+        <div class="rw-actions mt-6">
+          <button class="btn btn-soft btn-sm" id="rwCopy">Copy CV mới</button>
+          <button class="btn btn-soft btn-sm" id="rwDocx">⬇ Xuất Word (.docx)</button>
+          <input type="file" id="rwFile" accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp" multiple hidden>
+          <button class="btn btn-primary btn-sm" id="rwReupload" title="Nạp CV mới (sau khi bạn chỉnh thêm nếu muốn) để AI chấm lại trên cùng vị trí — xem điểm tăng bao nhiêu">Nạp CV mới kiểm chứng…</button>
+        </div>
+        ${d.cached ? '<div class="small muted mt-2">↩ Kết quả đã tạo trước đó. Bấm "Viết lại từ đầu" để tạo lại (sẽ tốn 1 lượt AI mới).</div>' : ''}
+        <div class="ai-disclaimer mt-4">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+          CV do AI viết lại từ CV gốc — hãy đọc kỹ và chỉnh theo giọng của bạn trước khi gửi nhà tuyển dụng.
+        </div>`;
+      $('#rwCopy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(d.rewrittenCv || ''); toast('Đã copy CV mới'); } catch { toast('Không copy được'); }
+      });
+      $('#rwDocx').addEventListener('click', () => exportDocx(`CV ${SESSION.cv?.candidateName || ''} — bản viết lại (HireMind)`, d.rewrittenCv || '', 'hiremind-cv-viet-lai.docx'));
+      $('#rwGoRoadmap')?.addEventListener('click', () => document.querySelector('[data-tab="roadmap"]')?.click());
+      $('#rwReupload').addEventListener('click', () => $('#rwFile').click());
+      $('#rwFile').addEventListener('change', async () => {
+        const files = $('#rwFile').files;
+        if (!files.length) return;
+        const rbtn = $('#rwReupload');
+        rbtn.disabled = true;
+        rbtn.textContent = 'Đang nạp...';
+        try {
+          const fd = new FormData();
+          for (const f of files) fd.append('files', f);
+          const res = await fetch(`/api/session/${sessionId}/reupload`, { method: 'POST', body: fd });
+          const dd = await res.json();
+          if (dd.error) { toast(dd.error); rbtn.disabled = false; rbtn.textContent = 'Nạp CV mới kiểm chứng…'; }
+          else { toast('Đã tạo phiên kiểm chứng — đang chuyển trang...'); setTimeout(() => { location.href = dd.url; }, 700); }
+        } catch {
+          toast('Lỗi kết nối — thử lại');
+          rbtn.disabled = false;
+          rbtn.textContent = 'Nạp CV mới kiểm chứng…';
+        }
+        $('#rwFile').value = '';
+      });
+    }
+
+    if (SESSION.rewrite) {
+      renderResult({ ...SESSION.rewrite, cached: true });
+    } else if (SESSION.rewritePending) {
+      btn.disabled = true;
+      out.innerHTML = pendingHtml();
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/session/${sessionId}`);
+          const s = await res.json();
+          if (!s.rewritePending) {
+            clearInterval(pollTimer); pollTimer = null;
+            btn.disabled = false;
+            if (s.rewrite) { renderResult({ ...s.rewrite, cached: false }); SESSION.rewrite = s.rewrite; }
+            else out.innerHTML = '';
+          }
+        } catch { /* poll tiếp */ }
+      }, 2500);
+    }
+
+    btn.addEventListener('click', async () => {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      btn.disabled = true;
+      out.innerHTML = pendingHtml();
+      try {
+        const res = await fetch(`/api/session/${sessionId}/rewrite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        const d = await res.json();
+        if (d.error) {
+          out.innerHTML = `<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ ${esc(d.error)}</div>`;
+        } else {
+          renderResult(d);
+          SESSION.rewrite = d;
+          btn.innerHTML = `${RW_ICON} Viết lại từ đầu`;
+        }
+      } catch {
+        out.innerHTML = '<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ Lỗi kết nối — CV có thể vẫn đang được viết, quay lại tab sau ít phút.</div>';
+      }
+      btn.disabled = false;
+    });
   }
 
   // ----- Chat -----

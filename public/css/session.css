@@ -658,3 +658,53 @@
 }
 .dropzone.dragover { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18), 0 14px 36px rgba(99, 102, 241, 0.25); border-style: solid; }
 @media (prefers-reduced-motion: reduce) { .dropzone .dz-icon { animation: none; } }
+
+/* ===================== CV Rewrite & Reshape (v15) ===================== */
+.rw-actions-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.rw-note {
+  font-size: 0.92rem; color: var(--fg-soft);
+  background: var(--primary-soft);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+}
+.rw-section-label { font-family: var(--font-head); font-weight: 700; font-size: 1.02rem; margin: 4px 0 10px; color: var(--fg); }
+.rw-cv {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  max-height: 560px; overflow: auto;
+}
+.rw-changes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 760px) { .rw-changes { grid-template-columns: 1fr; } }
+.chg-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.chg-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; font-size: 0.92rem; }
+.chg-ba { display: flex; align-items: baseline; gap: 8px; font-size: 0.88rem; margin-bottom: 4px; flex-wrap: wrap; }
+.chg-before { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(148, 163, 184, 0.55); }
+.chg-arrow { color: var(--muted-2); font-weight: 700; }
+.chg-after { color: var(--fg); font-weight: 600; }
+.chg-why { font-size: 0.85rem; color: var(--muted); }
+.rw-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.rw-actions .btn-primary { margin-left: auto; }
+@media (max-width: 560px) { .rw-actions .btn-primary { margin-left: 0; flex: 1 1 100%; justify-content: center; } }
+.badge-green { background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- Panel so sánh trước/sau (phiên kiểm chứng) ---------- */
+.cmp-panel { border-left: 4px solid var(--accent); }
+.cmp-rows { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 14px; }
+.cmp-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  border-bottom: 1px dashed var(--border); padding-bottom: 12px;
+}
+.cmp-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cmp-lbl { font-weight: 600; color: var(--fg-soft); }
+.cmp-vals { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-head); }
+.cmp-old { color: var(--muted); font-size: 1.15rem; }
+.cmp-arrow { color: var(--muted-2); }
+.cmp-new { font-size: 1.6rem; font-weight: 700; }
+.cmp-delta { font-size: 0.9rem; font-weight: 700; border-radius: 999px; padding: 2px 12px; }
+.cmp-up { color: var(--accent); background: var(--accent-soft); }
+.cmp-down { color: var(--danger); background: var(--danger-soft); }
+.cmp-flat { color: var(--muted); background: var(--bg-soft); }
+.cmp-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
