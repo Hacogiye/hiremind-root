@@ -236,7 +236,7 @@
       { num: r.overallScore || 0, unit: '/100', lbl: 'Điểm CV', bar: true, tab: 'overview' },
       // Nhãn do AI tự viết (verdictLabel) — session cũ không có thì fallback mapping cố định
       ...(jd && r.match ? [{ num: r.match.matchScore, unit: '/100', lbl: 'Khớp ATS' + (r.match.verdictLabel ? ` · ${r.match.verdictLabel}` : v ? ` · ${v.label}` : ''), tab: 'match' }] : []),
-      { num: ha.passProbability, unit: '%', lbl: ha.verdictLabel || pv.label, cls: 'pass-' + (ha.verdict || 'uncertain').replace('_', '-'), tab: 'overview', title: `${pv.emoji} ${ha.headline || 'Khả năng đậu phỏng vấn — xem phân tích ở tab Tổng quan'}` },
+      { num: ha.passProbability, unit: '%', lbl: ha.verdictLabel || pv.label, cls: 'pass-' + (ha.verdict || 'uncertain').replace('_', '-'), tab: 'overview', tip: `${pv.emoji} ${ha.headline || 'Khả năng đậu phỏng vấn — xem phân tích ở tab Tổng quan'}` },
     ];
     const hasExtra = !!r.summary || (cv.extractedSkills || []).length > 0;
     return `
@@ -248,7 +248,7 @@
           </div>
           <div class="hc-stats">
             ${stats.map(st => `
-              <button class="hc-stat ${st.cls || ''}" data-go="${st.tab}" ${st.title ? `title="${esc(st.title)}"` : ''} aria-label="${esc(st.lbl)}">
+              <button class="hc-stat ${st.cls || ''}" data-go="${st.tab}" ${st.tip ? `data-tip="${esc(st.tip)}"` : ''} aria-label="${esc(st.lbl)}">
                 <span class="hs-num"><span data-count="${st.num}">0</span><span class="hs-unit">${st.unit}</span></span>
                 <span class="hs-lbl">${esc(st.lbl)}</span>
                 ${st.bar ? `<span class="hs-bar"><i data-target="${st.num}"></i></span>` : ''}
