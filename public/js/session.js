@@ -1664,11 +1664,13 @@
       <div class="panel mb-6">
         <div class="panel-title">
           <span class="pt-icon sky"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
-          CV đã được AI hợp nhất &amp; dọn sạch
+          CV đã được AI trích xuất &amp; dọn sạch — nguồn dữ liệu cho mọi phân tích
         </div>
+        <p class="muted" style="margin-bottom: 14px;">Đối chiếu với CV thật của bạn: nếu thấy sai sót ở đây (OCR đọc sai, thiếu mục) thì toàn bộ phân tích phía trên cũng dựa trên nội dung này — hãy tải lại CV ảnh rõ nét hơn hoặc dùng nhập tay.</p>
         ${cv.sections && cv.sections.length ? `<div class="skill-chips mb-4">${cv.sections.map(s => `<span class="skill-chip">${esc(s)}</span>`).join('')}</div>` : ''}
-        <div class="cv-clean">${esc(cv.cleanedCv || 'Không có nội dung.')}</div>
+        <div class="rw-cv md-wrap">${md(cv.cleanedCv || 'Không có nội dung.')}</div>
         <div class="rw-actions mt-4">
+          <button class="btn btn-soft btn-sm" id="cvCopy">Copy văn bản</button>
           <button class="btn btn-soft btn-sm" id="cvDocx">⬇ Xuất CV thiết kế (.docx)</button>
           <span class="small muted">File Word có banner màu, ô dán ảnh 3×4, heading màu — mở là chỉnh được ngay.</span>
         </div>
@@ -1684,8 +1686,10 @@
   }
 
   function initCv() {
-    const btn = $('#cvDocx');
-    if (btn) btn.addEventListener('click', () => exportCvDocx(SESSION.cv?.cleanedCv || '', SESSION.cv?.candidateName || 'CV'));
+    $('#cvCopy')?.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(SESSION.cv?.cleanedCv || ''); toast('Đã copy văn bản CV'); } catch { toast('Không copy được'); }
+    });
+    $('#cvDocx')?.addEventListener('click', () => exportCvDocx(SESSION.cv?.cleanedCv || '', SESSION.cv?.candidateName || 'CV'));
   }
 
   // Copy session link
