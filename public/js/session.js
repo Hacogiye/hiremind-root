@@ -1634,6 +1634,15 @@
         if (!emails.length) { toast('Nhập ít nhất một email người nhận'); return; }
         const bad = emails.find(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
         if (bad) { toast(`Email không hợp lệ: ${bad}`); return; }
+        // Chống lặp tiêu đề: AI đôi khi vẫn chèn subject vào đầu thân thư
+        let letterBody = d.letter || '';
+        const su0 = (d.subject || '').trim();
+        if (su0) {
+          const lines = letterBody.split('\n');
+          const first = lines.findIndex(l => l.trim());
+          if (first !== -1 && lines[first].replace(/[*#]/g, '').trim() === su0) lines.splice(first, 1);
+          letterBody = lines.join('\n');
+        }
         const bcc = $('#clMailBcc').checked;
         let rcpt = '';
         if (bcc) {
@@ -1642,7 +1651,7 @@
           rcpt = `&to=${encodeURIComponent(to.split(',').map(s => s.trim()).filter(Boolean).join(','))}`;
           if (cc) rcpt += `&cc=${encodeURIComponent(cc.split(',').map(s => s.trim()).filter(Boolean).join(','))}`;
         }
-        const url = `https://mail.google.com/mail/?view=cm&fs=1${rcpt}&su=${encodeURIComponent(d.subject || 'Ứng tuyển')}&body=${encodeURIComponent(mdToPlain(d.letter || ''))}`;
+        const url = `https://mail.google.com/mail/?view=cm&fs=1${rcpt}&su=${encodeURIComponent(d.subject || 'Ứng tuyển')}&body=${encodeURIComponent(mdToPlain(letterBody))}`;
         window.open(url, '_blank');
         toast('Đã mở Gmail — xem lại thư rồi bấm Gửi trong đó');
       });
