@@ -570,24 +570,26 @@ app.post('/api/session/:id/rewrite', rateLimit('rewrite'), async (req, res) => {
   try {
     const s = readSession(req.params.id);
     if (s.status !== 'ready') return res.status(400).json({ error: 'Phiên chưa sẵn sàng' });
+    const mode = req.body?.mode === 'addskills' ? 'addskills' : 'reshape';
 
     await withSession(req.params.id, s2 => {
       s2.rewritePending = true;
-      s2.rewriteMeta = 'default';
+      s2.rewriteMeta = mode;
     });
 
     try {
-      const result = await rewriteCV(s);
+      const result = await rewriteCV(s, { mode });
       if (!result || typeof result.rewrittenCv !== 'string' || !result.rewrittenCv.trim()) {
         throw new Error('AI trả về CV viết lại không hợp lệ');
       }
-      result.changes = Array.isArray(result.changes) ? result.changes.slice(0, 8) : [];
+      result.changes = Array.isArray(result.changes) ? result.changes.slice(0, mode === 'addskills' ? 10 : 8) : [];
       result.unfixableGaps = Array.isArray(result.unfixableGaps) ? result.unfixableGaps.slice(0, 4) : [];
       await withSession(req.params.id, s2 => {
         s2.rewrite = result;
+        s2.rewriteMode = mode;
         s2.rewritePending = false;
       });
-      res.json(result);
+      res.json({ ...result, mode });
     } catch (e) {
       await withSession(req.params.id, s2 => { s2.rewritePending = false; }).catch(() => {});
       throw e;

@@ -23,6 +23,16 @@
       return '<div class="md">' + esc(text) + '</div>';
     }
   }
+  // Markdown → plain text (cho body Gmail compose — không render md, giữ bullet/newline)
+  function mdToPlain(t) {
+    return String(t)
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^[-*+]\s+/gm, '• ');
+  }
+
   // DOCX export helper
   async function exportDocx(title, markdown, filename) {
     try {
@@ -187,7 +197,7 @@
       ['overview', 'Tổng quan', true],
       ['match', 'Đối chiếu JD', !!jd],
       ['roadmap', 'Lộ trình', !!(r.roadmap && r.roadmap.length)],
-      ['rewrite', 'CV viết lại', true],
+      ['rewrite', 'Viết lại CV', true],
       ['chat', 'Chat Coach', true],
       ['interview', 'Phỏng vấn giả lập', true],
       ['cover', 'Cover Letter', true],
@@ -653,13 +663,17 @@
       <div class="panel">
         <div class="panel-title">
           <span class="pt-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3z"/></svg></span>
-          CV viết lại — "may đo" theo vị trí nhắm tới
-          <span class="count">không bịa thông tin</span>
+          Viết lại CV — "may đo" theo vị trí nhắm tới
+          <span class="count">AI tham khảo — bạn kiểm tra lại</span>
         </div>
-        <p class="muted" style="margin-bottom: 14px;">AI viết lại CV của bạn dựa trên toàn bộ phân tích${hasJd ? ` và tin tuyển dụng <strong>${esc(SESSION.jd.title || '')}</strong>` : ''}: sắp xếp lại thứ tự, diễn lại câu yếu, nhấn mạnh điểm khớp. AI <strong>không bịa thêm gì</strong> — những gì thiếu thật sự sẽ nằm ở phần "không sửa được bằng viết lại".</p>
+        <p class="muted" style="margin-bottom: 14px;">Chọn chế độ viết lại, AI dựa trên toàn bộ phân tích${hasJd ? ` và tin tuyển dụng <strong>${esc(SESSION.jd.title || '')}</strong>` : ''} để làm lại CV của bạn. Kết quả là <strong>đề xuất tham khảo</strong> — hãy đọc kỹ và đánh giá lại trước khi dùng.</p>
+        <div class="rw-modes">
+          <label class="rw-mode"><input type="radio" name="rwMode" value="reshape" checked><span class="rwm-body"><strong>Cấu trúc &amp; làm nổi bật</strong><small>Sắp xếp lại, diễn lại câu yếu, cắt chi tiết thừa — không thêm gì mới vào CV</small></span></label>
+          <label class="rw-mode"><input type="radio" name="rwMode" value="addskills"><span class="rwm-body"><strong>Bổ sung kỹ năng còn thiếu</strong><small>Thêm mục "Kỹ năng đang bổ sung" từ các gap — kèm ghi chú trung thực, bạn tự xác nhận</small></span></label>
+        </div>
         ${!hasJd ? '<div class="leave-note mb-4">Phiên này không có JD — CV sẽ được tối ưu theo vị trí bạn đã điền. Tạo phiên mới kèm link/dán JD để được "may đo" sát hơn.</div>' : ''}
         <div class="rw-actions-bar">
-          <button class="btn btn-primary" id="rwGen">${RW_ICON} ${SESSION.rewrite ? 'Viết lại từ đầu' : 'Viết lại CV theo JD này'}</button>
+          <button class="btn btn-primary" id="rwGen">${RW_ICON} ${SESSION.rewrite ? 'Viết lại từ đầu' : 'Viết lại CV'}</button>
           <span class="small muted">Tốn 1 lượt AI (~1 phút) · kết quả lưu tự động</span>
         </div>
         <div id="rwResult"></div>
@@ -670,7 +684,7 @@
     const btn = $('#rwGen'), out = $('#rwResult');
     let pollTimer = null;
 
-    const pendingHtml = () => `<div class="text-center muted" style="padding: 36px 0;"><span class="typing-dots"><span></span><span></span><span></span></span><div class="mt-3">AI đang viết lại CV... (bạn có thể rời đi — quay lại sẽ thấy kết quả)</div></div>`;
+    const pendingHtml = mode => `<div class="text-center muted" style="padding: 36px 0;"><span class="typing-dots"><span></span><span></span><span></span></span><div class="mt-3">AI đang ${mode === 'addskills' ? 'bổ sung kỹ năng & ' : ''}viết lại CV... (bạn có thể rời đi — quay lại sẽ thấy kết quả)</div></div>`;
 
     function renderResult(d) {
       const TYPE = {
@@ -678,9 +692,12 @@
         rephrase: ['badge-sky', 'Diễn lại'],
         emphasize: ['badge-green', 'Nhấn mạnh'],
         format: ['badge-amber', 'Định dạng'],
+        add: ['badge-rose', 'Bổ sung'],
       };
+      const mode = d.mode || SESSION.rewriteMode || 'reshape';
       out.innerHTML = `
         ${d.note ? `<div class="rw-note">${esc(d.note)}</div>` : ''}
+        ${mode === 'addskills' ? `<div class="leave-note" style="background: var(--warn-soft); color: var(--warn); width: 100%; margin-bottom: 14px;"><strong>⚠ Chế độ bổ sung kỹ năng — ý kiến AI chỉ mang tính tham khảo:</strong> chỉ giữ những kỹ năng bạn thực sự có hoặc đang học; nhà tuyển dụng sẽ hỏi sâu về mọi kỹ năng ghi trong CV.</div>` : ''}
         <div class="rw-section-label">① Bản CV đã viết lại</div>
         <div class="rw-cv md-wrap">${md(d.rewrittenCv || '(trống)')}</div>
         <div class="rw-section-label mt-6">② Thay đổi đáng chú ý <span class="count">${(d.changes || []).length}</span></div>
@@ -709,7 +726,7 @@
         ${d.cached ? '<div class="small muted mt-2">↩ Kết quả đã tạo trước đó. Bấm "Viết lại từ đầu" để tạo lại (sẽ tốn 1 lượt AI mới).</div>' : ''}
         <div class="ai-disclaimer mt-4">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
-          CV do AI viết lại từ CV gốc — hãy đọc kỹ và chỉnh theo giọng của bạn trước khi gửi nhà tuyển dụng.
+          CV do AI viết lại từ CV gốc — ý kiến chỉ mang tính tham khảo; hãy đọc kỹ, kiểm chứng và đánh giá lại trước khi gửi nhà tuyển dụng.
         </div>`;
       $('#rwCopy').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(d.rewrittenCv || ''); toast('Đã copy CV mới'); } catch { toast('Không copy được'); }
@@ -740,10 +757,10 @@
     }
 
     if (SESSION.rewrite) {
-      renderResult({ ...SESSION.rewrite, cached: true });
+      renderResult({ ...SESSION.rewrite, cached: true, mode: SESSION.rewriteMode });
     } else if (SESSION.rewritePending) {
       btn.disabled = true;
-      out.innerHTML = pendingHtml();
+      out.innerHTML = pendingHtml(SESSION.rewriteMeta);
       pollTimer = setInterval(async () => {
         try {
           const res = await fetch(`/api/session/${sessionId}`);
@@ -751,7 +768,7 @@
           if (!s.rewritePending) {
             clearInterval(pollTimer); pollTimer = null;
             btn.disabled = false;
-            if (s.rewrite) { renderResult({ ...s.rewrite, cached: false }); SESSION.rewrite = s.rewrite; }
+            if (s.rewrite) { renderResult({ ...s.rewrite, cached: false, mode: s.rewriteMode }); SESSION.rewrite = s.rewrite; SESSION.rewriteMode = s.rewriteMode; }
             else out.innerHTML = '';
           }
         } catch { /* poll tiếp */ }
@@ -761,25 +778,27 @@
     btn.addEventListener('click', async () => {
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       btn.disabled = true;
-      out.innerHTML = pendingHtml();
+      const mode = document.querySelector('input[name="rwMode"]:checked')?.value || 'reshape';
+      out.innerHTML = pendingHtml(mode);
       try {
-        const res = await fetch(`/api/session/${sessionId}/rewrite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        });
-        const d = await res.json();
-        if (d.error) {
-          out.innerHTML = `<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ ${esc(d.error)}</div>`;
-        } else {
-          renderResult(d);
-          SESSION.rewrite = d;
-          btn.innerHTML = `${RW_ICON} Viết lại từ đầu`;
+          const res = await fetch(`/api/session/${sessionId}/rewrite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode }),
+          });
+          const d = await res.json();
+          if (d.error) {
+            out.innerHTML = `<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ ${esc(d.error)}</div>`;
+          } else {
+            renderResult(d);
+            SESSION.rewrite = d;
+            SESSION.rewriteMode = d.mode;
+            btn.innerHTML = `${RW_ICON} Viết lại từ đầu`;
+          }
+        } catch {
+          out.innerHTML = '<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ Lỗi kết nối — CV có thể vẫn đang được viết, quay lại tab sau ít phút.</div>';
         }
-      } catch {
-        out.innerHTML = '<div class="leave-note" style="background: var(--danger-soft); color: var(--danger); width: 100%;">⚠ Lỗi kết nối — CV có thể vẫn đang được viết, quay lại tab sau ít phút.</div>';
-      }
-      btn.disabled = false;
+        btn.disabled = false;
     });
   }
 
@@ -1596,12 +1615,37 @@
             <button class="btn btn-soft btn-sm" id="clDocx">⬇ Xuất Word (.docx)</button>
             <button class="btn btn-ghost btn-sm" id="clPrint">In / Xuất PDF</button>
           </div>
+          <div class="cl-send">
+            <input class="input" id="clMailTo" placeholder="Email người nhận — nhiều email cách nhau bằng dấu phẩy" autocomplete="off">
+            <input class="input" id="clMailCc" placeholder="CC (tùy chọn)" autocomplete="off" style="flex: 0 1 200px;">
+            <label><input type="checkbox" id="clMailBcc"> Ẩn danh người nhận (BCC)</label>
+            <button class="btn btn-soft btn-sm" id="clGmail" title="Mở Gmail với thư đã điền sẵn — bạn xem lại và bấm Gửi trong đó">✉ Mở Gmail soạn thư</button>
+          </div>
         </div>`;
       $('#clCopy').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(d.letter || ''); toast('Đã copy thư'); } catch { toast('Không copy được'); }
       });
       $('#clDocx').addEventListener('click', () => exportDocx(d.subject || 'Cover Letter — HireMind', d.letter || '', 'hiremind-cover-letter.docx'));
       $('#clPrint').addEventListener('click', () => printLetter(d));
+      $('#clGmail').addEventListener('click', () => {
+        const to = $('#clMailTo').value.trim();
+        const cc = $('#clMailCc').value.trim();
+        const emails = `${to},${cc}`.split(',').map(s => s.trim()).filter(Boolean);
+        if (!emails.length) { toast('Nhập ít nhất một email người nhận'); return; }
+        const bad = emails.find(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+        if (bad) { toast(`Email không hợp lệ: ${bad}`); return; }
+        const bcc = $('#clMailBcc').checked;
+        let rcpt = '';
+        if (bcc) {
+          rcpt = `&bcc=${encodeURIComponent(emails.join(','))}`;
+        } else {
+          rcpt = `&to=${encodeURIComponent(to.split(',').map(s => s.trim()).filter(Boolean).join(','))}`;
+          if (cc) rcpt += `&cc=${encodeURIComponent(cc.split(',').map(s => s.trim()).filter(Boolean).join(','))}`;
+        }
+        const url = `https://mail.google.com/mail/?view=cm&fs=1${rcpt}&su=${encodeURIComponent(d.subject || 'Ứng tuyển')}&body=${encodeURIComponent(mdToPlain(d.letter || ''))}`;
+        window.open(url, '_blank');
+        toast('Đã mở Gmail — xem lại thư rồi bấm Gửi trong đó');
+      });
     }
 
     // Quay lại tab khi AI vẫn đang viết (hoặc đã viết xong từ lúc trước) → restore
